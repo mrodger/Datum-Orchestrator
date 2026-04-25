@@ -16,13 +16,16 @@ from .db import close_pool, get_pool
 from .dispatch import check_drone_health, close_client as close_dispatch_client
 from .drift import get_drift_status, run_drift_sweep
 from .ingest import close_clients as close_ingest_clients, ingest_report
+# ingest_report used directly by /ingest endpoint; _post_completion wraps it for callback path
 from .models import (
+    CallbackPayload,
     HealthResponse,
     KnowledgeFact,
+    ManualIngestPayload,
     OrchestrateRequest,
     RunStatus,
 )
-from .orchestrator import get_run, orchestrate
+from .orchestrator import _post_completion, get_run, orchestrate
 
 
 @asynccontextmanager
@@ -108,14 +111,12 @@ async def handle_get_run(run_id: UUID):
 # ── POST /callback ───────────────────────────────────────────────
 
 @app.post("/callback")
-async def handle_drone_callback(payload: dict, bg: BackgroundTasks):
+async def handle_drone_callback(payload: CallbackPayload, bg: BackgroundTasks):
     """Webhook endpoint for drone completion callbacks.
 
-    Triggers ingestion in the background.
+    Triggers full post-completion pipeline (ingest + score + drift) in background.
     """
-    task_id = payload.get("taskId")
-    if not task_id:
-        raise HTTPException(status_code=400, detail="taskId required")
+    task_id = payload.taskId
 
     pool = await get_pool()
     run = await pool.fetchrow(
@@ -127,8 +128,8 @@ async def handle_drone_callback(payload: dict, bg: BackgroundTasks):
         return {"status": "ignored", "reason": "unknown task"}
 
     # Update drone status
-    status = payload.get("status", "complete")
-    output = payload.get("output", "")
+    status = payload.status
+    output = payload.output
     await pool.execute(
         """
         UPDATE orchestration_runs
@@ -138,25 +139,37 @@ async def handle_drone_callback(payload: dict, bg: BackgroundTasks):
         status, output, run["id"],
     )
 
-    # Trigger ingestion in background
+    # Trigger full post-completion pipeline in background (ingest + score + drift)
     if status == "complete" and output:
-        bg.add_task(_safe_ingest, run["id"], task_id, output)
+        # Retrieve skill_names from the run's source_request
+        skill_names = []
+        try:
+            from .skills import select_skills_for_task
+            src_req = await pool.fetchval(
+                "SELECT task_description FROM orchestration_runs WHERE id = $1", run["id"]
+            )
+            if src_req:
+                skill_names = select_skills_for_task(src_req)
+        except Exception:
+            pass
+        bg.add_task(_safe_post_completion, run["id"], task_id, output, skill_names)
 
     return {"status": "accepted", "run_id": str(run["id"])}
 
 
-async def _safe_ingest(run_id: UUID, task_id: str, output: str):
-    """Wrapper for background ingestion with error handling."""
+async def _safe_post_completion(run_id: UUID, task_id: str, output: str, skill_names: list[str]):
+    """Wrapper for background post-completion with error handling."""
     import logging
     logger = logging.getLogger(__name__)
     try:
-        await ingest_report(run_id, task_id, output)
+        pool = await get_pool()
+        await _post_completion(pool, run_id, task_id, output, skill_names)
     except Exception as e:
-        logger.error("Background ingestion failed for run %s: %s", run_id, e)
+        logger.error("Background post-completion failed for run %s: %s", run_id, e)
         pool = await get_pool()
         await pool.execute(
             "UPDATE orchestration_runs SET ingestion_status = 'failed', scoring_notes = $1 WHERE id = $2",
-            f"Callback ingestion error: {e}", run_id,
+            f"Callback post-completion error: {e}", run_id,
         )
 
 
@@ -173,9 +186,7 @@ async def handle_knowledge(
     """Query spatial knowledge store."""
     pool = await get_pool()
 
-    where_clause = "" if include_invalidated else "AND invalid_at IS NULL"
-    rows = await pool.fetch(
-        f"""
+    query = """
         SELECT id, content, category, location_text, confidence,
                valid_at, invalid_at, invalidation_reason,
                drone_task_id, run_id,
@@ -186,7 +197,7 @@ async def handle_knowledge(
                ) AS distance_m
         FROM knowledge_facts
         WHERE geom IS NOT NULL
-          {where_clause}
+          AND ($5 OR invalid_at IS NULL)
           AND ST_DWithin(
               geom::geography,
               ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
@@ -194,9 +205,8 @@ async def handle_knowledge(
           )
         ORDER BY distance_m ASC
         LIMIT $4
-        """,
-        lon, lat, radius_m, limit,
-    )
+    """
+    rows = await pool.fetch(query, lon, lat, radius_m, limit, include_invalidated)
 
     return {
         "facts": [
@@ -309,16 +319,8 @@ async def handle_provenance(run_id: UUID):
 # ── POST /ingest (manual) ────────────────────────────────────────
 
 @app.post("/ingest")
-async def handle_manual_ingest(payload: dict):
-    """Manual ingestion for testing/backfill.
-
-    Expects: {"drone_task_id": "...", "output": "..."}
-    """
-    drone_task_id = payload.get("drone_task_id")
-    output = payload.get("output")
-    if not drone_task_id or not output:
-        raise HTTPException(status_code=400, detail="drone_task_id and output required")
-
+async def handle_manual_ingest(payload: ManualIngestPayload):
+    """Manual ingestion for testing/backfill."""
     pool = await get_pool()
     import json
 
@@ -331,12 +333,12 @@ async def handle_manual_ingest(payload: dict):
         ) VALUES ('manual', $1, 'Manual ingestion', '', $2, 'complete', $3, NOW(), 'pending')
         RETURNING id
         """,
-        json.dumps(payload),
-        drone_task_id,
-        output,
+        json.dumps(payload.model_dump()),
+        payload.drone_task_id,
+        payload.output,
     )
 
-    facts, contradictions = await ingest_report(run_id, drone_task_id, output)
+    facts, contradictions = await ingest_report(run_id, payload.drone_task_id, payload.output)
 
     return {
         "run_id": str(run_id),

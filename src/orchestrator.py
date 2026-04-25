@@ -150,7 +150,14 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         run_id,
     )
 
-    # ── 6. Poll for completion ────────────────────────────────────
+    # ── 6. Callback mode: return immediately after dispatch ───────
+
+    if use_callback:
+        # Async path — drone will POST /callback when done, which
+        # triggers ingestion. No polling, no blocking.
+        return await _build_run_status(pool, run_id)
+
+    # ── 7. Poll for completion (sync path only) ────────────────
 
     result = await poll_until_done(drone_resp.taskId)
 
@@ -165,43 +172,38 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         run_id,
     )
 
-    # ── 7. Ingest ─────────────────────────────────────────────────
+    # ── 8. Ingest + score + drift ─────────────────────────────────
 
+    if result.status == "complete" and result.output:
+        await _post_completion(pool, run_id, drone_resp.taskId, result.output, skill_names)
+
+    # ── 9. Return ─────────────────────────────────────────────────
+
+    return await _build_run_status(pool, run_id)
+
+
+async def _post_completion(
+    pool, run_id: UUID, task_id: str, output: str, skill_names: list[str]
+):
+    """Shared post-completion pipeline: ingest, score, drift sweep."""
     facts_count = 0
     contradictions = 0
-    if result.status == "complete" and result.output:
-        try:
-            facts_count, contradictions = await ingest_report(
-                run_id, drone_resp.taskId, result.output
-            )
-        except Exception as e:
-            logger.error("Ingestion failed for run %s: %s", run_id, e)
-            await pool.execute(
-                """
-                UPDATE orchestration_runs
-                SET ingestion_status = 'failed',
-                    scoring_notes = $1
-                WHERE id = $2
-                """,
-                f"Ingestion error: {e}",
-                run_id,
-            )
+    try:
+        facts_count, contradictions = await ingest_report(run_id, task_id, output)
+    except Exception as e:
+        logger.error("Ingestion failed for run %s: %s", run_id, e)
+        await pool.execute(
+            "UPDATE orchestration_runs SET ingestion_status = 'failed', scoring_notes = $1 WHERE id = $2",
+            f"Ingestion error: {e}", run_id,
+        )
 
-    # ── 8. Score ──────────────────────────────────────────────────
-
-    quality = None
+    # Score
     if facts_count > 0:
         quality = min(1.0, facts_count / 20) * max(0.5, 1.0 - contradictions / max(facts_count, 1))
         await pool.execute(
-            """
-            UPDATE orchestration_runs
-            SET outcome_quality = $1, scored_at = NOW()
-            WHERE id = $2
-            """,
-            quality,
-            run_id,
+            "UPDATE orchestration_runs SET outcome_quality = $1, scored_at = NOW() WHERE id = $2",
+            quality, run_id,
         )
-
         for skill in skill_names:
             await pool.execute(
                 """
@@ -211,29 +213,25 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
                 skill, run_id, quality, facts_count, contradictions,
             )
 
-    # ── 9. Drift sweep ────────────────────────────────────────────
+    # Drift sweep (advisory — don't fail the run)
+    try:
+        await run_drift_sweep()
+    except Exception as e:
+        logger.warning("Drift sweep failed for run %s: %s", run_id, e)
 
-    await run_drift_sweep()
 
-    # ── 10. Return (single query instead of 4x fetchval) ──────────
-
-    row = await pool.fetchrow(
-        """
-        SELECT created_at, dispatched_at, drone_completed_at, ingested_at
-        FROM orchestration_runs WHERE id = $1
-        """,
-        run_id,
-    )
-
+async def _build_run_status(pool, run_id: UUID) -> RunStatus:
+    """Read current run state from DB and return RunStatus."""
+    row = await pool.fetchrow("SELECT * FROM orchestration_runs WHERE id = $1", run_id)
     return RunStatus(
-        id=run_id,
-        task_description=req.description,
-        drone_task_id=drone_resp.taskId,
-        drone_status=result.status,
-        ingestion_status="complete" if facts_count > 0 else "skipped",
-        facts_extracted=facts_count,
-        contradictions_found=contradictions,
-        outcome_quality=quality,
+        id=row["id"],
+        task_description=row["task_description"],
+        drone_task_id=row["drone_task_id"],
+        drone_status=row["drone_status"],
+        ingestion_status=row["ingestion_status"],
+        facts_extracted=row["facts_extracted"] or 0,
+        contradictions_found=row["contradictions_found"] or 0,
+        outcome_quality=row["outcome_quality"],
         created_at=row["created_at"],
         dispatched_at=row["dispatched_at"],
         drone_completed_at=row["drone_completed_at"],
@@ -247,17 +245,4 @@ async def get_run(run_id: UUID) -> RunStatus | None:
     row = await pool.fetchrow("SELECT * FROM orchestration_runs WHERE id = $1", run_id)
     if not row:
         return None
-    return RunStatus(
-        id=row["id"],
-        task_description=row["task_description"],
-        drone_task_id=row["drone_task_id"],
-        drone_status=row["drone_status"],
-        ingestion_status=row["ingestion_status"],
-        facts_extracted=row["facts_extracted"],
-        contradictions_found=row["contradictions_found"],
-        outcome_quality=row["outcome_quality"],
-        created_at=row["created_at"],
-        dispatched_at=row["dispatched_at"],
-        drone_completed_at=row["drone_completed_at"],
-        ingested_at=row["ingested_at"],
-    )
+    return await _build_run_status(pool, run_id)

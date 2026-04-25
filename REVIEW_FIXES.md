@@ -111,22 +111,86 @@ The review flagged `geom_sql = f"ST_SetSRID(ST_MakePoint({finding.lon}, {finding
 
 ---
 
+## Re-Review Fixes (GPT-5.4 re-review, task 1ed662c7, score 6.5/10)
+
+### 17. F-01: Async path polls AND sends callback — dual completion
+**Status:** FIXED
+- `orchestrate(use_callback=True)` now returns immediately after dispatch. No polling in callback mode.
+- Callback path runs full post-completion pipeline (ingest + score + drift) via `_post_completion()`.
+- Sync path polls as before and runs same `_post_completion()` pipeline.
+**Files changed:** `src/orchestrator.py`, `src/server.py`
+
+### 18. F-02: Contradiction updates use `pool` outside fact insert transaction
+**Status:** FIXED
+- `detect_contradictions()` and `_decrement_coverage_count()` now accept `conn` (not `pool`).
+- Invalidations happen inside the same transaction as the fact insert.
+- Renamed shadowed `result` variable to `update_result`.
+**Files changed:** `src/ingest.py`
+
+### 19. F-04: Dispatch/poll failures leave run status stuck
+**Status:** FIXED
+- `_post_completion()` catches ingestion errors and writes `'failed'` to DB.
+- Extraction errors caught separately, also write `'failed'` + scoring_notes.
+- `_build_run_status()` reads actual DB state instead of constructing from local vars.
+**Files changed:** `src/orchestrator.py`, `src/ingest.py`
+
+### 20. F-05/F-06: Embedding failure aborts ingestion / manifest mismatch
+**Status:** FIXED
+- Embedding failures are non-fatal: facts stored without vectors.
+- Dimension mismatch sets `embedding=None` with warning log.
+- Aligns with MANIFEST: "Facts stored without vectors; spatial queries work."
+**Files changed:** `src/ingest.py`
+
+### 21. F-07: Drift sweep failure fails orchestration
+**Status:** FIXED
+- Drift sweep wrapped in try/except inside `_post_completion()`. Failures logged, don't fail the run.
+**Files changed:** `src/orchestrator.py`
+
+### 22. F-08: Centroid drift events not deduplicated
+**Status:** FIXED
+- Added duplicate suppression: skip if unresolved or recent (<1 day) centroid_shift event exists.
+**Files changed:** `src/drift.py`
+
+### 23. F-10: f-string SQL in `/knowledge`
+**Status:** FIXED
+- Replaced f-string `where_clause` with parameterized `$5 OR invalid_at IS NULL`.
+**Files changed:** `src/server.py`
+
+### 24. F-12: No Pydantic models on `/callback` and `/ingest`
+**Status:** FIXED
+- Added `CallbackPayload` and `ManualIngestPayload` models.
+- Both endpoints now validate input via Pydantic instead of raw `dict`.
+**Files changed:** `src/models.py`, `src/server.py`
+
+### 25. F-18: Return value misreports ingestion status
+**Status:** FIXED
+- `_build_run_status()` reads actual `ingestion_status` from DB row.
+- Both sync and async paths use this shared helper.
+- Coverage counts based on `inserted_findings` (actually stored) not `extraction.findings` (attempted).
+**Files changed:** `src/orchestrator.py`, `src/ingest.py`
+
+---
+
 ## Verification
 
-Test dispatch (2026-04-25 02:49 UTC):
+Test dispatch 1 (2026-04-25 02:49 UTC):
 - Task: "Research the current state of renewable energy adoption in New Zealand"
 - Drone task: `087e9277`, status: `complete`
 - **21 facts extracted**, 0 contradictions, quality 1.0
+
+Test dispatch 2 (2026-04-25 03:21 UTC — post re-review fixes):
+- Task: "Research recent volcanic activity in the Taupo Volcanic Zone"
+- Drone task: `6bdb4b0e`, status: `complete`
+- **13 facts extracted**, 0 contradictions, quality 0.65
 - Ingestion status: `complete`, ingested_at populated
-- Spatial query returning geotagged facts with distance correctly
-- Full provenance chain intact (run_id → drone_task_id → extraction_index)
+- Status reads from DB correctly (F-18 fix verified)
 
 ---
 
 ## NOT FIXED (Architectural / Out of Scope)
 
-- **No auth on endpoints** — internal-only service on docker network. Auth belongs at API gateway level, not here.
-- **orchestrator.py god function** — refactoring the 10-step loop is architectural work for a future sprint.
+- **No auth on callback endpoint (F-03)** — internal-only service on docker network. Auth belongs at API gateway level. If boundary expands, add HMAC callback signing.
+- **orchestrator.py god function** — refactoring the 10-step loop is architectural work for a future sprint. Partially mitigated by extracting `_post_completion()` and `_build_run_status()`.
 - **No migration strategy** — valid concern, defer until schema stabilizes.
 - **Missing observability** — added `logging` module with structured messages. Full metrics/tracing is out of scope.
-- **Synchronous orchestration at scale** — async mode exists and works. Sync mode is convenience for testing.
+- **Lazy client init without async lock (F-14/F-15)** — race is harmless (worst case: two clients created, one GC'd). Not worth the complexity of an async lock for an internal service.

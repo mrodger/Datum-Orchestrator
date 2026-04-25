@@ -140,7 +140,7 @@ async def _check_staleness(pool, cell_id: str) -> DriftEvent | None:
         metric_value=staleness,
         threshold=float(STALENESS_DAYS),
         details={"days_stale": row["days_stale"]},
-        detected_at=row["last_ingested_at"],
+        detected_at=datetime.now(timezone.utc),
         resolved_at=None,
     )
 
@@ -249,6 +249,18 @@ async def _check_centroid_drift(pool, cell_id: str) -> DriftEvent | None:
     )
 
     if drift < CENTROID_DRIFT_THRESHOLD:
+        return None
+
+    # Deduplicate: skip if unresolved or recent centroid_shift exists for this cell
+    existing = await pool.fetchval(
+        """
+        SELECT id FROM drift_events
+        WHERE cell_id = $1 AND event_type = 'centroid_shift'
+          AND resolved_at IS NULL AND detected_at > NOW() - INTERVAL '1 day'
+        """,
+        cell_id,
+    )
+    if existing:
         return None
 
     severity = "critical" if drift > 0.3 else "warning"

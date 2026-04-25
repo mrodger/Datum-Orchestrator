@@ -34,7 +34,7 @@ point traces back to its source drone output via full provenance chains.
 | PostGIS down | 503 on all endpoints | Restart postgis container |
 | Drone unreachable | Task logged as dispatch_failed | Retries on next manual trigger |
 | LLM extraction fails | Raw output stored, no structured facts | Re-run via POST /ingest |
-| Embedding API fails | Facts stored without vectors | Backfill via scheduled re-embed job |
+| Embedding API fails | Facts stored without vectors (embedding=NULL) | Backfill via scheduled re-embed job |
 | Contradiction detection fails | New facts stored, old facts not invalidated | Manual sweep via POST /drift/sweep |
 
 ## Behavioral Contracts

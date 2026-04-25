@@ -133,7 +133,7 @@ async def embed_text(text: str) -> list[float]:
 # ── Contradiction Detection ──────────────────────────────────────
 
 async def detect_contradictions(
-    pool, finding: ExtractedFinding, finding_id: UUID, radius_m: float = 2000.0
+    conn, finding: ExtractedFinding, finding_id: UUID, radius_m: float = 2000.0
 ) -> int:
     """Check if a new finding contradicts existing active facts nearby.
 
@@ -144,7 +144,7 @@ async def detect_contradictions(
         return 0
 
     # Get candidate facts: same area, still active
-    candidates = await pool.fetch(
+    candidates = await conn.fetch(
         """
         SELECT id, content FROM knowledge_facts
         WHERE invalid_at IS NULL
@@ -206,7 +206,7 @@ If none are contradicted, return {{"contradicted": [], "reasons": {{}}}}"""
 
     for cid in contradicted_ids:
         try:
-            result = await pool.execute(
+            update_result = await conn.execute(
                 """
                 UPDATE knowledge_facts
                 SET invalid_at = NOW(),
@@ -218,10 +218,10 @@ If none are contradicted, return {{"contradicted": [], "reasons": {{}}}}"""
                 reasons.get(cid, "Contradicted by newer finding"),
                 cid,
             )
-            if result == "UPDATE 1":
+            if update_result == "UPDATE 1":
                 invalidated += 1
                 # Decrement active_fact_count on affected coverage cell
-                await _decrement_coverage_count(pool, cid)
+                await _decrement_coverage_count(conn, cid)
         except (asyncpg.InvalidTextRepresentationError, asyncpg.ForeignKeyViolationError) as e:
             logger.warning("Skipping invalidation for fact %s: %s", cid, e)
         except Exception as e:
@@ -230,10 +230,10 @@ If none are contradicted, return {{"contradicted": [], "reasons": {{}}}}"""
     return invalidated
 
 
-async def _decrement_coverage_count(pool: asyncpg.Pool, fact_id: str):
+async def _decrement_coverage_count(conn, fact_id: str):
     """Decrement active_fact_count on the coverage cell containing this fact."""
     try:
-        await pool.execute(
+        await conn.execute(
             """
             UPDATE coverage_cells SET active_fact_count = GREATEST(0, active_fact_count - 1)
             WHERE cell_id = (
@@ -288,18 +288,33 @@ async def ingest_report(
         return (row["facts_extracted"], row["contradictions_found"]) if row else (0, 0)
 
     # 1. Extract findings
-    extraction = await extract_findings(drone_output)
+    try:
+        extraction = await extract_findings(drone_output)
+    except Exception as e:
+        logger.error("Extraction failed for run %s: %s", run_id, e)
+        await pool.execute(
+            "UPDATE orchestration_runs SET ingestion_status = 'failed', scoring_notes = $1 WHERE id = $2",
+            f"Extraction error: {e}", run_id,
+        )
+        return 0, 0
+
     total_contradictions = 0
 
     # 2. Process each finding inside a transaction
+    inserted_findings: list[ExtractedFinding] = []
     for idx, finding in enumerate(extraction.findings):
-        # Embed
-        embedding = await embed_text(finding.content)
-        if len(embedding) != EMBEDDING_DIM:
-            logger.error(
-                "Embedding dimension mismatch: got %d, expected %d", len(embedding), EMBEDDING_DIM
-            )
-            continue
+        # Embed — failures are non-fatal; store fact without vector
+        embedding = None
+        try:
+            embedding = await embed_text(finding.content)
+            if len(embedding) != EMBEDDING_DIM:
+                logger.warning(
+                    "Embedding dimension mismatch: got %d, expected %d — storing without vector",
+                    len(embedding), EMBEDDING_DIM,
+                )
+                embedding = None
+        except Exception as e:
+            logger.warning("Embedding failed for finding %d: %s — storing without vector", idx, e)
 
         async with pool.acquire() as conn:
             async with conn.transaction():
@@ -355,16 +370,17 @@ async def ingest_report(
                     logger.info("Fact already exists for run %s idx %d, skipping", run_id, idx)
                     continue
 
+                inserted_findings.append(finding)
                 fact_id = row["id"]
 
-                # 3. Contradiction detection (inside same transaction for the insert)
-                invalidated = await detect_contradictions(pool, finding, fact_id)
+                # 3. Contradiction detection (same conn = same transaction)
+                invalidated = await detect_contradictions(conn, finding, fact_id)
                 total_contradictions += invalidated
 
-    # 4. Update coverage cells for geotagged findings
-    await _update_coverage(pool, extraction.findings)
+    # 4. Update coverage cells only for successfully inserted geotagged findings
+    await _update_coverage(pool, inserted_findings)
 
-    # 5. Update the orchestration run
+    # 5. Update the orchestration run — always reach a terminal state
     await pool.execute(
         """
         UPDATE orchestration_runs
@@ -374,12 +390,12 @@ async def ingest_report(
             ingested_at = NOW()
         WHERE id = $3
         """,
-        len(extraction.findings),
+        len(inserted_findings),
         total_contradictions,
         run_id,
     )
 
-    return len(extraction.findings), total_contradictions
+    return len(inserted_findings), total_contradictions
 
 
 async def _update_coverage(pool, findings: list[ExtractedFinding]):

@@ -150,6 +150,19 @@ class KnowledgeFact(BaseModel):
     distance_m: float | None = None
 
 
+# ── Callback / manual ingest requests ────────────────────────
+
+class CallbackPayload(BaseModel):
+    taskId: str
+    status: str = "complete"
+    output: str = ""
+
+
+class ManualIngestPayload(BaseModel):
+    drone_task_id: str
+    output: str
+
+
 # ── Health ───────────────────────────────────────────────────────
 
 class HealthResponse(BaseModel):
