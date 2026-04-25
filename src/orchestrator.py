@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 from uuid import UUID
 
 from .db import get_pool
@@ -13,20 +15,25 @@ from .models import DroneDispatchPayload, OrchestrateRequest, RunStatus
 from .skills import render_skills_context, select_skills_for_task
 from .spatial import build_spatial_context, get_fact_ids_for_context
 
+logger = logging.getLogger(__name__)
+
+CALLBACK_URL = os.environ.get(
+    "ORCHESTRATOR_CALLBACK_URL", "http://datum-orchestrator:8000/callback"
+)
+
 
 async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = None) -> RunStatus:
     """Full orchestration pipeline:
 
     1. Create run record (or reuse existing from async path)
-    2. Geocode task location
-    3. Query PostGIS for spatial context
-    4. Select + inject relevant skills
-    5. Dispatch enriched task to drone
-    6. Poll for completion
-    7. Ingest drone output (extract, geocode, embed, contradiction-detect)
-    8. Score the dispatch
-    9. Run drift sweep
-    10. Return final status
+    2. Query PostGIS for spatial context (nearby facts, contradictions, gaps)
+    3. Select + inject relevant skills
+    4. Dispatch enriched task to drone
+    5. Poll for completion
+    6. Ingest drone output (extract, embed, contradiction-detect)
+    7. Score the dispatch
+    8. Run drift sweep
+    9. Return final status
     """
     pool = await get_pool()
 
@@ -37,7 +44,6 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
 
     if existing_run_id:
         run_id = existing_run_id
-        # Update the existing record with full details
         if lat is not None and lon is not None:
             await pool.execute(
                 """
@@ -82,7 +88,7 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
                 req.description, req.instructions, req.model,
             )
 
-    # ── 2 + 3. Spatial context ───────────────────────────────────
+    # ── 2. Spatial context ────────────────────────────────────────
 
     spatial_context = None
     fact_ids: list[UUID] = []
@@ -90,14 +96,12 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         spatial_context = await build_spatial_context(lat, lon)
         fact_ids = await get_fact_ids_for_context(lat, lon, 5000.0)
 
-    # ── 4. Skills ────────────────────────────────────────────────
+    # ── 3. Skills ─────────────────────────────────────────────────
 
     skill_names = select_skills_for_task(req.description)
     skills_text = render_skills_context(skill_names)
 
-    # ── 5. Build enriched instructions ───────────────────────────
-
-    enriched_instructions = req.instructions
+    # ── 4. Build context for drone prompt ─────────────────────────
 
     context_blocks = []
     if req.context:
@@ -109,7 +113,6 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
 
     full_context = "\n\n---\n\n".join(context_blocks) if context_blocks else None
 
-    # Store what we injected (provenance)
     await pool.execute(
         """
         UPDATE orchestration_runs
@@ -124,16 +127,15 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         run_id,
     )
 
-    # ── 6. Dispatch to drone ─────────────────────────────────────
+    # ── 5. Dispatch to drone ──────────────────────────────────────
 
-    callback_url = req.callback_url or f"http://host.docker.internal:3020/callback"
     payload = DroneDispatchPayload(
         description=req.description,
-        instructions=enriched_instructions,
+        instructions=req.instructions,
         context=full_context,
         model=req.model,
         maxTurns=req.max_turns,
-        callbackUrl=callback_url,
+        callbackUrl=CALLBACK_URL,
     )
 
     drone_resp = await dispatch(payload)
@@ -148,7 +150,7 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         run_id,
     )
 
-    # ── 7. Poll for completion ───────────────────────────────────
+    # ── 6. Poll for completion ────────────────────────────────────
 
     result = await poll_until_done(drone_resp.taskId)
 
@@ -163,7 +165,7 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         run_id,
     )
 
-    # ── 8. Ingest ────────────────────────────────────────────────
+    # ── 7. Ingest ─────────────────────────────────────────────────
 
     facts_count = 0
     contradictions = 0
@@ -173,6 +175,7 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
                 run_id, drone_resp.taskId, result.output
             )
         except Exception as e:
+            logger.error("Ingestion failed for run %s: %s", run_id, e)
             await pool.execute(
                 """
                 UPDATE orchestration_runs
@@ -184,7 +187,7 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
                 run_id,
             )
 
-    # ── 9. Score ─────────────────────────────────────────────────
+    # ── 8. Score ──────────────────────────────────────────────────
 
     quality = None
     if facts_count > 0:
@@ -199,7 +202,6 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
             run_id,
         )
 
-        # Log skill scores
         for skill in skill_names:
             await pool.execute(
                 """
@@ -209,11 +211,19 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
                 skill, run_id, quality, facts_count, contradictions,
             )
 
-    # ── 10. Drift sweep ──────────────────────────────────────────
+    # ── 9. Drift sweep ────────────────────────────────────────────
 
     await run_drift_sweep()
 
-    # ── Return ───────────────────────────────────────────────────
+    # ── 10. Return (single query instead of 4x fetchval) ──────────
+
+    row = await pool.fetchrow(
+        """
+        SELECT created_at, dispatched_at, drone_completed_at, ingested_at
+        FROM orchestration_runs WHERE id = $1
+        """,
+        run_id,
+    )
 
     return RunStatus(
         id=run_id,
@@ -224,10 +234,10 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         facts_extracted=facts_count,
         contradictions_found=contradictions,
         outcome_quality=quality,
-        created_at=await pool.fetchval("SELECT created_at FROM orchestration_runs WHERE id = $1", run_id),
-        dispatched_at=await pool.fetchval("SELECT dispatched_at FROM orchestration_runs WHERE id = $1", run_id),
-        drone_completed_at=await pool.fetchval("SELECT drone_completed_at FROM orchestration_runs WHERE id = $1", run_id),
-        ingested_at=await pool.fetchval("SELECT ingested_at FROM orchestration_runs WHERE id = $1", run_id),
+        created_at=row["created_at"],
+        dispatched_at=row["dispatched_at"],
+        drone_completed_at=row["drone_completed_at"],
+        ingested_at=row["ingested_at"],
     )
 
 

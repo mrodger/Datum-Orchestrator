@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -15,12 +14,11 @@ class OrchestrateRequest(BaseModel):
     description: str
     instructions: str
     context: str | None = None
-    lat: float | None = None
-    lon: float | None = None
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lon: float | None = Field(default=None, ge=-180, le=180)
     location_text: str | None = None
     model: str = "gpt-5.4-mini"
-    max_turns: int = 30
-    callback_url: str | None = None
+    max_turns: int = Field(default=30, ge=1, le=100)
     source: str = "datum"
 
 
@@ -73,8 +71,8 @@ class DroneTaskResult(BaseModel):
 class ExtractedFinding(BaseModel):
     content: str
     location_text: str | None = None
-    lat: float | None = None
-    lon: float | None = None
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lon: float | None = Field(default=None, ge=-180, le=180)
     confidence: float = Field(default=0.7, ge=0.0, le=1.0)
     category: str | None = None
     raw_excerpt: str | None = None
@@ -132,19 +130,8 @@ class DriftEvent(BaseModel):
     metric_value: float | None
     threshold: float | None
     details: dict | None
-    detected_at: datetime
-    resolved_at: datetime | None
-
-
-# ── Knowledge query ──────────────────────────────────────────────
-
-class KnowledgeQuery(BaseModel):
-    lat: float
-    lon: float
-    radius_m: float = 5000.0
-    query: str | None = None
-    limit: int = 20
-    include_invalidated: bool = False
+    detected_at: datetime | None = None
+    resolved_at: datetime | None = None
 
 
 class KnowledgeFact(BaseModel):

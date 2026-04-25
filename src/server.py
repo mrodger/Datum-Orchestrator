@@ -7,20 +7,18 @@ dispatches to drones, ingests results, monitors drift.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 
 from .db import close_pool, get_pool
-from .dispatch import check_drone_health
+from .dispatch import check_drone_health, close_client as close_dispatch_client
 from .drift import get_drift_status, run_drift_sweep
-from .ingest import ingest_report
+from .ingest import close_clients as close_ingest_clients, ingest_report
 from .models import (
-    DriftStatus,
     HealthResponse,
     KnowledgeFact,
-    KnowledgeQuery,
     OrchestrateRequest,
     RunStatus,
 )
@@ -32,7 +30,9 @@ async def lifespan(app: FastAPI):
     # Startup: warm the pool
     await get_pool()
     yield
-    # Shutdown
+    # Shutdown: close all connections
+    await close_ingest_clients()
+    await close_dispatch_client()
     await close_pool()
 
 
@@ -140,15 +140,36 @@ async def handle_drone_callback(payload: dict, bg: BackgroundTasks):
 
     # Trigger ingestion in background
     if status == "complete" and output:
-        bg.add_task(ingest_report, run["id"], task_id, output)
+        bg.add_task(_safe_ingest, run["id"], task_id, output)
 
     return {"status": "accepted", "run_id": str(run["id"])}
+
+
+async def _safe_ingest(run_id: UUID, task_id: str, output: str):
+    """Wrapper for background ingestion with error handling."""
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        await ingest_report(run_id, task_id, output)
+    except Exception as e:
+        logger.error("Background ingestion failed for run %s: %s", run_id, e)
+        pool = await get_pool()
+        await pool.execute(
+            "UPDATE orchestration_runs SET ingestion_status = 'failed', scoring_notes = $1 WHERE id = $2",
+            f"Callback ingestion error: {e}", run_id,
+        )
 
 
 # ── GET /knowledge ───────────────────────────────────────────────
 
 @app.get("/knowledge")
-async def handle_knowledge(lat: float, lon: float, radius_m: float = 5000.0, limit: int = 20, include_invalidated: bool = False):
+async def handle_knowledge(
+    lat: float = Query(ge=-90, le=90),
+    lon: float = Query(ge=-180, le=180),
+    radius_m: float = Query(default=5000.0, ge=1, le=50000),
+    limit: int = Query(default=20, ge=1, le=100),
+    include_invalidated: bool = False,
+):
     """Query spatial knowledge store."""
     pool = await get_pool()
 
@@ -217,7 +238,7 @@ async def handle_drift_sweep():
 # ── GET /runs ────────────────────────────────────────────────────
 
 @app.get("/runs")
-async def handle_list_runs(limit: int = 20, offset: int = 0):
+async def handle_list_runs(limit: int = Query(default=20, ge=1, le=100), offset: int = Query(default=0, ge=0)):
     """List orchestration runs (newest first). Full log reconstruction."""
     pool = await get_pool()
     rows = await pool.fetch(
@@ -338,11 +359,11 @@ async def handle_health():
 
     drone_status = await check_drone_health()
 
-    overall = "healthy" if db_status == "ok" else "degraded"
+    overall = "healthy" if db_status == "ok" and drone_status == "ok" else "degraded"
 
     return HealthResponse(
         status=overall,
         db=db_status,
         drone=drone_status,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
     )

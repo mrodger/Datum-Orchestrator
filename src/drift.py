@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime, timezone
 
 from .db import get_pool
 from .models import DriftEvent, DriftStatus
@@ -201,7 +202,7 @@ async def _check_contradiction_rate(pool, cell_id: str) -> DriftEvent | None:
         id=event_id, event_type="contradiction_spike", severity=severity,
         cell_id=cell_id, metric_value=rate, threshold=CONTRADICTION_RATE_THRESHOLD,
         details={"total_facts": row["total"], "invalidated": row["invalidated"]},
-        detected_at=None, resolved_at=None,
+        detected_at=datetime.now(timezone.utc), resolved_at=None,
     )
 
 
@@ -265,7 +266,7 @@ async def _check_centroid_drift(pool, cell_id: str) -> DriftEvent | None:
         id=event_id, event_type="centroid_shift", severity=severity,
         cell_id=cell_id, metric_value=drift, threshold=CENTROID_DRIFT_THRESHOLD,
         details={"ref_count": len(ref_rows), "cur_count": len(cur_rows)},
-        detected_at=None, resolved_at=None,
+        detected_at=datetime.now(timezone.utc), resolved_at=None,
     )
 
 

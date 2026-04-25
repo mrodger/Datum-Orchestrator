@@ -16,16 +16,16 @@ point traces back to its source drone output via full provenance chains.
 | Dependency | Type | Failure Behaviour |
 |---|---|---|
 | **PostGIS 16 + pgvector** | In-compose container | Orchestrator cannot start (503 on all endpoints) |
-| **Drone API** (localhost:3010) | External service | Tasks queue but don't dispatch; ingestion continues for manual submissions |
-| **LiteLLM** (localhost:4000) | External service | Extraction + embedding fails; tasks still dispatch with stale/no context |
-| **OpenAI Embeddings API** | Via LiteLLM | Facts stored without vectors; spatial queries work, semantic queries degraded |
+| **Drone API** (drone-agent:3000) | External service (drone-internal network) | Tasks queue but don't dispatch; ingestion continues for manual submissions |
+| **LiteLLM** (drone-litellm:4000) | External service (drone-internal network) | Extraction fails; tasks still dispatch with stale/no context |
+| **OpenAI Embeddings API** | Direct HTTPS | Facts stored without vectors; spatial queries work, semantic queries degraded |
 
 ## Dependents
 
 | Dependent | Contract |
 |---|---|
 | **Datum** (agentic-ui :8090) | POST /orchestrate → {run_id, status}. POST /orchestrate/async for fire-and-forget. |
-| **Drone** (:3010) | Receives enriched tasks. Calls back to POST /callback on completion. No direct dependency on orchestrator. |
+| **Drone** (drone-agent:3000) | Receives enriched tasks. Calls back to POST /callback on completion. No direct dependency on orchestrator. |
 
 ## Failure Modes
 
@@ -40,6 +40,7 @@ point traces back to its source drone output via full provenance chains.
 ## Behavioral Contracts
 
 - **Read-only drone consumer**: never modifies drone state, only reads via GET endpoints
+- **Idempotent ingestion**: ingestion is claimed atomically (pending → running). Poll path and callback path cannot both ingest. Unique constraint on (run_id, extraction_index) prevents duplicate facts.
 - **Append-only knowledge store**: facts are invalidated (invalid_at set), never deleted. Full provenance chain via invalidated_by FK and run_id FK.
 - **Full log reconstruction**: every orchestration run stores the original request, injected context snapshot, drone output verbatim, extracted facts with extraction_index, and invalidation chains. The run_log view joins all of this.
 - **Drift events are advisory**: no autonomous action in Phase 1. Drift sweep logs events but does not auto-dispatch.

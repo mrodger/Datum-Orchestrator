@@ -4,6 +4,7 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============================================================
 -- ORCHESTRATION LOG
@@ -100,6 +101,7 @@ CREATE INDEX idx_facts_run ON knowledge_facts (run_id);
 CREATE INDEX idx_facts_drone ON knowledge_facts (drone_task_id);
 CREATE INDEX idx_facts_category ON knowledge_facts (category)
     WHERE invalid_at IS NULL;
+CREATE UNIQUE INDEX idx_facts_run_extraction ON knowledge_facts (run_id, extraction_index);
 
 -- ============================================================
 -- COVERAGE CELLS

@@ -9,7 +9,7 @@ import httpx
 
 from .models import DroneDispatchPayload, DroneTaskResponse, DroneTaskResult
 
-DRONE_URL = os.environ.get("DRONE_API_URL", "http://host.docker.internal:3010")
+DRONE_URL = os.environ.get("DRONE_API_URL", "http://drone-agent:3000")
 _client: httpx.AsyncClient | None = None
 
 
@@ -18,6 +18,14 @@ def _get_client() -> httpx.AsyncClient:
     if _client is None:
         _client = httpx.AsyncClient(base_url=DRONE_URL, timeout=30.0)
     return _client
+
+
+async def close_client():
+    """Close HTTP client. Called from server lifespan shutdown."""
+    global _client
+    if _client:
+        await _client.aclose()
+        _client = None
 
 
 async def dispatch(payload: DroneDispatchPayload) -> DroneTaskResponse:

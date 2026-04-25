@@ -35,6 +35,7 @@ services:
       - LITELLM_API_KEY=${LITELLM_MASTER_KEY:-drone2026}
       - ORCHESTRATOR_MODEL=${ORCHESTRATOR_MODEL:-gpt-5.4}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ORCHESTRATOR_CALLBACK_URL=http://datum-orchestrator:8000/callback
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

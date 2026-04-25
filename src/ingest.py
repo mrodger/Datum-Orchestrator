@@ -1,4 +1,4 @@
-"""Report ingestion — extract findings from drone output, geocode, embed, store.
+"""Report ingestion — extract findings from drone output, embed, store.
 
 Every extracted fact gets full provenance:
   run_id → orchestration_runs.id (which session produced this)
@@ -10,18 +10,23 @@ Every extracted fact gets full provenance:
 from __future__ import annotations
 
 import json
+import logging
 import os
 from uuid import UUID
 
+import asyncpg
 import httpx
 
 from .db import get_pool
 from .models import ExtractedFinding, ExtractionResult
 
+logger = logging.getLogger(__name__)
+
 LITELLM_URL = os.environ.get("LITELLM_BASE_URL", "http://drone-litellm:4000")
 LITELLM_KEY = os.environ.get("LITELLM_API_KEY", "drone2026")
 ORCH_MODEL = os.environ.get("ORCHESTRATOR_MODEL", "gpt-5.4")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+EMBEDDING_DIM = 1536  # text-embedding-3-small
 
 _llm_client: httpx.AsyncClient | None = None
 _embed_client: httpx.AsyncClient | None = None
@@ -47,6 +52,17 @@ def _get_embed_client() -> httpx.AsyncClient:
             timeout=30.0,
         )
     return _embed_client
+
+
+async def close_clients():
+    """Close HTTP clients. Called from server lifespan shutdown."""
+    global _llm_client, _embed_client
+    if _llm_client:
+        await _llm_client.aclose()
+        _llm_client = None
+    if _embed_client:
+        await _embed_client.aclose()
+        _embed_client = None
 
 
 # ── Extraction ───────────────────────────────────────────────────
@@ -190,7 +206,7 @@ If none are contradicted, return {{"contradicted": [], "reasons": {{}}}}"""
 
     for cid in contradicted_ids:
         try:
-            await pool.execute(
+            result = await pool.execute(
                 """
                 UPDATE knowledge_facts
                 SET invalid_at = NOW(),
@@ -202,86 +218,148 @@ If none are contradicted, return {{"contradicted": [], "reasons": {{}}}}"""
                 reasons.get(cid, "Contradicted by newer finding"),
                 cid,
             )
-            invalidated += 1
-        except Exception:
-            pass  # invalid UUID or already invalidated
+            if result == "UPDATE 1":
+                invalidated += 1
+                # Decrement active_fact_count on affected coverage cell
+                await _decrement_coverage_count(pool, cid)
+        except (asyncpg.InvalidTextRepresentationError, asyncpg.ForeignKeyViolationError) as e:
+            logger.warning("Skipping invalidation for fact %s: %s", cid, e)
+        except Exception as e:
+            logger.error("Unexpected error invalidating fact %s: %s", cid, e)
 
     return invalidated
 
 
+async def _decrement_coverage_count(pool: asyncpg.Pool, fact_id: str):
+    """Decrement active_fact_count on the coverage cell containing this fact."""
+    try:
+        await pool.execute(
+            """
+            UPDATE coverage_cells SET active_fact_count = GREATEST(0, active_fact_count - 1)
+            WHERE cell_id = (
+                SELECT ROUND(ST_Y(geom)::numeric, 1) || '_' || ROUND(ST_X(geom)::numeric, 1)
+                FROM knowledge_facts WHERE id = $1::uuid AND geom IS NOT NULL
+            )
+            """,
+            fact_id,
+        )
+    except Exception as e:
+        logger.warning("Failed to decrement coverage for fact %s: %s", fact_id, e)
+
+
 # ── Full Ingestion Pipeline ──────────────────────────────────────
+
+async def _claim_ingestion(pool: asyncpg.Pool, run_id: UUID) -> bool:
+    """Atomically claim ingestion for this run. Returns True if claimed.
+
+    Prevents duplicate ingestion from poll + callback race.
+    """
+    result = await pool.fetchval(
+        """
+        UPDATE orchestration_runs
+        SET ingestion_status = 'running'
+        WHERE id = $1 AND ingestion_status = 'pending'
+        RETURNING id
+        """,
+        run_id,
+    )
+    return result is not None
+
 
 async def ingest_report(
     run_id: UUID,
     drone_task_id: str,
     drone_output: str,
 ) -> tuple[int, int]:
-    """Full ingestion: extract → geocode → embed → store → detect contradictions.
+    """Full ingestion: extract → embed → store → detect contradictions.
 
     Returns (facts_extracted, contradictions_found).
+    Idempotent: only runs if ingestion_status is 'pending'.
     """
     pool = await get_pool()
+
+    # Idempotency guard — first caller wins
+    if not await _claim_ingestion(pool, run_id):
+        logger.info("Ingestion already claimed for run %s, skipping", run_id)
+        row = await pool.fetchrow(
+            "SELECT facts_extracted, contradictions_found FROM orchestration_runs WHERE id = $1",
+            run_id,
+        )
+        return (row["facts_extracted"], row["contradictions_found"]) if row else (0, 0)
 
     # 1. Extract findings
     extraction = await extract_findings(drone_output)
     total_contradictions = 0
 
-    # 2. Process each finding
+    # 2. Process each finding inside a transaction
     for idx, finding in enumerate(extraction.findings):
         # Embed
         embedding = await embed_text(finding.content)
-
-        # Insert fact with full provenance
-        has_geom = finding.lat is not None and finding.lon is not None
-        if has_geom:
-            row = await pool.fetchrow(
-                """
-                INSERT INTO knowledge_facts (
-                    run_id, drone_task_id, extraction_index,
-                    content, category, raw_excerpt,
-                    geom, location_text, geocode_confidence,
-                    embedding, confidence, source_type
-                ) VALUES (
-                    $1, $2, $3,
-                    $4, $5, $6,
-                    ST_SetSRID(ST_MakePoint($7, $8), 4326), $9, $10,
-                    $11, $12, 'drone_report'
-                )
-                RETURNING id
-                """,
-                run_id, drone_task_id, idx,
-                finding.content, finding.category, finding.raw_excerpt,
-                finding.lon, finding.lat,
-                finding.location_text, finding.confidence,
-                embedding, finding.confidence,
+        if len(embedding) != EMBEDDING_DIM:
+            logger.error(
+                "Embedding dimension mismatch: got %d, expected %d", len(embedding), EMBEDDING_DIM
             )
-        else:
-            row = await pool.fetchrow(
-                """
-                INSERT INTO knowledge_facts (
-                    run_id, drone_task_id, extraction_index,
-                    content, category, raw_excerpt,
-                    location_text,
-                    embedding, confidence, source_type
-                ) VALUES (
-                    $1, $2, $3,
-                    $4, $5, $6,
-                    $7,
-                    $8, $9, 'drone_report'
-                )
-                RETURNING id
-                """,
-                run_id, drone_task_id, idx,
-                finding.content, finding.category, finding.raw_excerpt,
-                finding.location_text,
-                embedding, finding.confidence,
-            )
+            continue
 
-        fact_id = row["id"]
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                # Insert fact with full provenance
+                has_geom = finding.lat is not None and finding.lon is not None
+                if has_geom:
+                    row = await conn.fetchrow(
+                        """
+                        INSERT INTO knowledge_facts (
+                            run_id, drone_task_id, extraction_index,
+                            content, category, raw_excerpt,
+                            geom, location_text, geocode_confidence,
+                            embedding, confidence, source_type
+                        ) VALUES (
+                            $1, $2, $3,
+                            $4, $5, $6,
+                            ST_SetSRID(ST_MakePoint($7, $8), 4326), $9, $10,
+                            $11, $12, 'drone_report'
+                        )
+                        ON CONFLICT (run_id, extraction_index) DO NOTHING
+                        RETURNING id
+                        """,
+                        run_id, drone_task_id, idx,
+                        finding.content, finding.category, finding.raw_excerpt,
+                        finding.lon, finding.lat,
+                        finding.location_text, finding.confidence,
+                        embedding, finding.confidence,
+                    )
+                else:
+                    row = await conn.fetchrow(
+                        """
+                        INSERT INTO knowledge_facts (
+                            run_id, drone_task_id, extraction_index,
+                            content, category, raw_excerpt,
+                            location_text,
+                            embedding, confidence, source_type
+                        ) VALUES (
+                            $1, $2, $3,
+                            $4, $5, $6,
+                            $7,
+                            $8, $9, 'drone_report'
+                        )
+                        ON CONFLICT (run_id, extraction_index) DO NOTHING
+                        RETURNING id
+                        """,
+                        run_id, drone_task_id, idx,
+                        finding.content, finding.category, finding.raw_excerpt,
+                        finding.location_text,
+                        embedding, finding.confidence,
+                    )
 
-        # 3. Contradiction detection
-        invalidated = await detect_contradictions(pool, finding, fact_id)
-        total_contradictions += invalidated
+                if row is None:
+                    logger.info("Fact already exists for run %s idx %d, skipping", run_id, idx)
+                    continue
+
+                fact_id = row["id"]
+
+                # 3. Contradiction detection (inside same transaction for the insert)
+                invalidated = await detect_contradictions(pool, finding, fact_id)
+                total_contradictions += invalidated
 
     # 4. Update coverage cells for geotagged findings
     await _update_coverage(pool, extraction.findings)
