@@ -136,8 +136,9 @@ async def handle_drone_callback(payload: CallbackPayload, bg: BackgroundTasks):
     if run["drone_status"] not in ("pending", "dispatched"):
         return {"status": "ignored", "reason": f"run already terminal: {run['drone_status']}"}
 
-    # Update drone status
-    status = payload.status
+    # Update drone status (normalize unknown statuses to 'failed')
+    VALID_DRONE_STATUSES = {"complete", "failed", "cancelled"}
+    status = payload.status if payload.status in VALID_DRONE_STATUSES else "failed"
     output = payload.output
     await pool.execute(
         """

@@ -40,7 +40,7 @@ point traces back to its source drone output via full provenance chains.
 ## Behavioral Contracts
 
 - **Read-only drone consumer**: never modifies drone state, only reads via GET endpoints
-- **Idempotent ingestion**: ingestion is claimed atomically (pending → running). Poll path and callback path cannot both ingest. Unique constraint on (run_id, extraction_index) prevents duplicate facts.
+- **Idempotent ingestion**: ingestion is claimed atomically (pending → running). Poll path and callback path cannot both ingest. Unique constraint on (run_id, extraction_index) prevents duplicate facts. **Limitation**: if callback post-completion fails after the drone_status is set to terminal, no retry path exists for the same run. Recovery: create a new run via POST /ingest with the drone output.
 - **Append-only knowledge store**: facts are invalidated (invalid_at set), never deleted. Full provenance chain via invalidated_by FK and run_id FK.
 - **Full log reconstruction**: every orchestration run stores the original request, injected context snapshot, drone output verbatim, extracted facts with extraction_index, and invalidation chains. The run_log view joins all of this.
 - **Drift events are advisory**: no autonomous action in Phase 1. Drift sweep logs events but does not auto-dispatch.

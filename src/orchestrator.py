@@ -187,24 +187,29 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         )
         return await _build_run_status(pool, run_id)
 
+    VALID_DRONE_STATUSES = {"complete", "failed", "cancelled"}
+    drone_status = result.status if result.status in VALID_DRONE_STATUSES else "failed"
+    if result.status not in VALID_DRONE_STATUSES:
+        logger.warning("Unknown drone status '%s' for task %s — normalized to 'failed'", result.status, drone_resp.taskId)
+
     await pool.execute(
         """
         UPDATE orchestration_runs
         SET drone_status = $1, drone_output_raw = $2, drone_completed_at = NOW()
         WHERE id = $3
         """,
-        result.status,
+        drone_status,
         result.output,
         run_id,
     )
 
     # ── 8. Ingest + score + drift ─────────────────────────────────
 
-    if result.status == "complete" and result.output:
+    if drone_status == "complete" and result.output:
         await _post_completion(pool, run_id, drone_resp.taskId, result.output, skill_names)
     else:
         # Failed/cancelled/empty output — mark ingestion as skipped
-        reason = f"Drone ended with status: {result.status}" if result.status != "complete" else "Drone completed with empty output"
+        reason = f"Drone ended with status: {drone_status}" if drone_status != "complete" else "Drone completed with empty output"
         await pool.execute(
             """
             UPDATE orchestration_runs

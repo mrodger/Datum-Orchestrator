@@ -153,7 +153,7 @@ async def _check_contradiction_rate(pool, cell_id: str) -> DriftEvent | None:
             SELECT id, invalid_at
             FROM knowledge_facts
             WHERE geom IS NOT NULL
-              AND ST_Within(geom, (SELECT geom FROM coverage_cells WHERE cell_id = $1))
+              AND ROUND(ST_Y(geom)::numeric, 1) || '_' || ROUND(ST_X(geom)::numeric, 1) = $1
               AND ingested_at > NOW() - INTERVAL '30 days'
         )
         SELECT
@@ -217,7 +217,7 @@ async def _check_centroid_drift(pool, cell_id: str) -> DriftEvent | None:
         SELECT embedding FROM knowledge_facts
         WHERE invalid_at IS NULL AND embedding IS NOT NULL
           AND geom IS NOT NULL
-          AND ST_Within(geom, (SELECT geom FROM coverage_cells WHERE cell_id = $1))
+          AND ROUND(ST_Y(geom)::numeric, 1) || '_' || ROUND(ST_X(geom)::numeric, 1) = $1
           AND ingested_at BETWEEN NOW() - INTERVAL '30 days' AND NOW() - INTERVAL '7 days'
         """,
         cell_id,
@@ -229,7 +229,7 @@ async def _check_centroid_drift(pool, cell_id: str) -> DriftEvent | None:
         SELECT embedding FROM knowledge_facts
         WHERE invalid_at IS NULL AND embedding IS NOT NULL
           AND geom IS NOT NULL
-          AND ST_Within(geom, (SELECT geom FROM coverage_cells WHERE cell_id = $1))
+          AND ROUND(ST_Y(geom)::numeric, 1) || '_' || ROUND(ST_X(geom)::numeric, 1) = $1
           AND ingested_at > NOW() - INTERVAL '7 days'
         """,
         cell_id,

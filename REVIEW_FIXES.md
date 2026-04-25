@@ -312,6 +312,31 @@ Test dispatch (2026-04-25 03:33 UTC):
 
 ---
 
+## Seventh-Pass Fixes (GPT-5.4-mini review 7, task abfa75e4, score 7.6/10)
+
+### DO-REV7-03: Drift queries use ST_Within which can miss boundary facts
+**Status:** FIXED
+- `_check_contradiction_rate` and `_check_centroid_drift` used `ST_Within(geom, coverage_cells.geom)` which could miss facts on cell boundaries that were assigned to the cell by `_cell_id()`.
+- Fix: replaced `ST_Within` with derived cell_id string comparison using `ROUND(ST_Y(geom)::numeric, 1) || '_' || ROUND(ST_X(geom)::numeric, 1) = $1`.
+**Files changed:** `src/drift.py`
+
+### DO-REV7-04: Unknown drone status strings persisted verbatim
+**Status:** FIXED
+- Both sync (orchestrator.py) and callback (server.py) now validate `result.status` against `{'complete', 'failed', 'cancelled'}`.
+- Unknown statuses normalized to `'failed'` with a warning log.
+**Files changed:** `src/orchestrator.py`, `src/server.py`
+
+### DO-REV7-01: Callback retry limitation after post-completion failure
+**Status:** DOCUMENTED
+- If callback post-completion fails after `drone_status` is set terminal, no retry path for the same run exists. Recovery: POST /ingest with the stored drone output.
+- Added limitation note to MANIFEST.md behavioral contracts.
+**Files changed:** `MANIFEST.md`
+
+### DO-REV7-02: Failed ingestion non-retriable (BY DESIGN)
+**Not fixed** - Duplicate of DO-REV6-02. Retry = create new run via `/ingest`.
+
+---
+
 ## NOT FIXED (Architectural / Out of Scope)
 
 - **No auth on callback endpoint** — internal-only service on docker network. Auth belongs at API gateway level. If boundary expands, add HMAC callback signing.
