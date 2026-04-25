@@ -30,13 +30,16 @@ services:
     env_file: .env
     environment:
       - DATABASE_URL=postgresql://orchestrator:${POSTGRES_PASSWORD:-orchestrator_local}@postgis:5432/orchestrator
-      - DRONE_API_URL=${DRONE_API_URL:-http://host.docker.internal:3010}
-      - LITELLM_BASE_URL=${LITELLM_BASE_URL:-http://host.docker.internal:4000}
+      - DRONE_API_URL=${DRONE_API_URL:-http://drone-agent:3000}
+      - LITELLM_BASE_URL=${LITELLM_BASE_URL:-http://drone-litellm:4000}
       - LITELLM_API_KEY=${LITELLM_MASTER_KEY:-drone2026}
       - ORCHESTRATOR_MODEL=${ORCHESTRATOR_MODEL:-gpt-5.4}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - drone
     volumes:
       - ./src:/app/src:ro
       - ./skills:/app/skills:ro
@@ -47,3 +50,6 @@ volumes:
 networks:
   default:
     name: orchestrator-internal
+  drone:
+    external: true
+    name: drone-internal

@@ -85,7 +85,7 @@ async def handle_orchestrate_async(req: OrchestrateRequest, bg: BackgroundTasks)
 async def _run_orchestration_bg(run_id: UUID, req: OrchestrateRequest):
     """Background orchestration task."""
     try:
-        await orchestrate(req)
+        await orchestrate(req, existing_run_id=run_id)
     except Exception as e:
         pool = await get_pool()
         await pool.execute(

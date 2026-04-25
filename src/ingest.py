@@ -18,11 +18,13 @@ import httpx
 from .db import get_pool
 from .models import ExtractedFinding, ExtractionResult
 
-LITELLM_URL = os.environ.get("LITELLM_BASE_URL", "http://host.docker.internal:4000")
+LITELLM_URL = os.environ.get("LITELLM_BASE_URL", "http://drone-litellm:4000")
 LITELLM_KEY = os.environ.get("LITELLM_API_KEY", "drone2026")
 ORCH_MODEL = os.environ.get("ORCHESTRATOR_MODEL", "gpt-5.4")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 _llm_client: httpx.AsyncClient | None = None
+_embed_client: httpx.AsyncClient | None = None
 
 
 def _get_llm_client() -> httpx.AsyncClient:
@@ -34,6 +36,17 @@ def _get_llm_client() -> httpx.AsyncClient:
             timeout=60.0,
         )
     return _llm_client
+
+
+def _get_embed_client() -> httpx.AsyncClient:
+    global _embed_client
+    if _embed_client is None:
+        _embed_client = httpx.AsyncClient(
+            base_url="https://api.openai.com",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+            timeout=30.0,
+        )
+    return _embed_client
 
 
 # ── Extraction ───────────────────────────────────────────────────
@@ -91,8 +104,8 @@ async def extract_findings(drone_output: str) -> ExtractionResult:
 # ── Embedding ────────────────────────────────────────────────────
 
 async def embed_text(text: str) -> list[float]:
-    """Get embedding vector via LiteLLM (OpenAI-compatible endpoint)."""
-    client = _get_llm_client()
+    """Get embedding vector via OpenAI API directly."""
+    client = _get_embed_client()
     resp = await client.post(
         "/v1/embeddings",
         json={"model": "text-embedding-3-small", "input": text},

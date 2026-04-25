@@ -14,10 +14,10 @@ from .skills import render_skills_context, select_skills_for_task
 from .spatial import build_spatial_context, get_fact_ids_for_context
 
 
-async def orchestrate(req: OrchestrateRequest) -> RunStatus:
+async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = None) -> RunStatus:
     """Full orchestration pipeline:
 
-    1. Create run record (full provenance of the original request)
+    1. Create run record (or reuse existing from async path)
     2. Geocode task location
     3. Query PostGIS for spatial context
     4. Select + inject relevant skills
@@ -35,30 +35,52 @@ async def orchestrate(req: OrchestrateRequest) -> RunStatus:
     lat = req.lat
     lon = req.lon
 
-    geom_sql = "NULL"
-    geom_params = []
-    if lat is not None and lon is not None:
-        geom_sql = "ST_SetSRID(ST_MakePoint($8, $9), 4326)"
-        geom_params = [lon, lat]
-
-    run_id = await pool.fetchval(
-        f"""
-        INSERT INTO orchestration_runs (
-            source, source_request, task_description, task_instructions,
-            task_geom, drone_model, drone_status, ingestion_status
-        ) VALUES (
-            $1, $2, $3, $4,
-            {geom_sql}, $5, 'pending', 'pending'
-        )
-        RETURNING id
-        """,
-        req.source,
-        json.dumps(req.model_dump()),
-        req.description,
-        req.instructions,
-        req.model,
-        *geom_params,
-    )
+    if existing_run_id:
+        run_id = existing_run_id
+        # Update the existing record with full details
+        if lat is not None and lon is not None:
+            await pool.execute(
+                """
+                UPDATE orchestration_runs
+                SET source_request = $1, task_geom = ST_SetSRID(ST_MakePoint($2, $3), 4326)
+                WHERE id = $4
+                """,
+                json.dumps(req.model_dump()), lon, lat, run_id,
+            )
+        else:
+            await pool.execute(
+                "UPDATE orchestration_runs SET source_request = $1 WHERE id = $2",
+                json.dumps(req.model_dump()), run_id,
+            )
+    else:
+        if lat is not None and lon is not None:
+            run_id = await pool.fetchval(
+                """
+                INSERT INTO orchestration_runs (
+                    source, source_request, task_description, task_instructions,
+                    task_geom, drone_model, drone_status, ingestion_status
+                ) VALUES (
+                    $1, $2, $3, $4,
+                    ST_SetSRID(ST_MakePoint($5, $6), 4326), $7, 'pending', 'pending'
+                )
+                RETURNING id
+                """,
+                req.source, json.dumps(req.model_dump()),
+                req.description, req.instructions,
+                lon, lat, req.model,
+            )
+        else:
+            run_id = await pool.fetchval(
+                """
+                INSERT INTO orchestration_runs (
+                    source, source_request, task_description, task_instructions,
+                    drone_model, drone_status, ingestion_status
+                ) VALUES ($1, $2, $3, $4, $5, 'pending', 'pending')
+                RETURNING id
+                """,
+                req.source, json.dumps(req.model_dump()),
+                req.description, req.instructions, req.model,
+            )
 
     # ── 2 + 3. Spatial context ───────────────────────────────────
 
