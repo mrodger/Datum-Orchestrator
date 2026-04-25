@@ -232,6 +232,44 @@ Test dispatch (2026-04-25 03:33 UTC):
 
 ---
 
+## Fifth-Pass Fixes (GPT-5.4 review 5, task 4acb40c9, score 6.5/10)
+
+### DO-REV5-01: `_run_orchestration_bg` doesn't terminal `ingestion_status` on failure
+**Status:** FIXED
+- On exception, now sets `drone_status='failed'` AND `ingestion_status='skipped'` (if still `'pending'`).
+- Prevents run staying permanently in a non-terminal state if the background task crashes.
+**Files changed:** `src/server.py`
+
+### DO-REV5-04/05: Duplicate callbacks create duplicate skill scores / overwrite terminal runs
+**Status:** FIXED
+- Callback handler now checks `drone_status` and rejects any callback when run is already terminal (not `'pending'` or `'dispatched'`).
+- Prevents second callback from writing a second skill_score row or overwriting completed output.
+**Files changed:** `src/server.py`
+
+### DO-REV5-07: `geocode_confidence` populated with extraction confidence
+**Status:** FIXED
+- Column now receives `NULL` instead of `finding.confidence`. Extraction confidence != geocoding confidence; no geocoder is present to supply a real value.
+- Removed the duplicate 12th positional arg from the geotagged fact insert.
+**Files changed:** `src/ingest.py`
+
+### DO-REV5-09: `poll_until_done` timeout leaves run stuck at `dispatched`
+**Status:** FIXED
+- Poll wrapped in try/except. On timeout or error: `drone_status='timed_out'`, `ingestion_status='skipped'`, error recorded in `scoring_notes`.
+**Files changed:** `src/orchestrator.py`
+
+### DO-REV5-11: Dead import `_get_embed_client` in `server.py`
+**Status:** FIXED
+- Removed unused import. `server.py` uses `_get_llm_client` only (for health check).
+**Files changed:** `src/server.py`
+
+### DO-REV5-02: `datetime` import wrong (FALSE POSITIVE)
+**Not fixed** — `from datetime import datetime, timezone` on line 10 is correct and working. Reviewer was mistaken.
+
+### DO-REV5-03: No auth on `/callback` (ARCHITECTURAL — DEFERRED)
+**Not fixed** — same as previous passes. Internal docker network. Auth at gateway when boundary expands.
+
+---
+
 ## NOT FIXED (Architectural / Out of Scope)
 
 - **No auth on callback endpoint** — internal-only service on docker network. Auth belongs at API gateway level. If boundary expands, add HMAC callback signing.
