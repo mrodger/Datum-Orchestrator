@@ -22,7 +22,7 @@ CALLBACK_URL = os.environ.get(
 )
 
 
-async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = None) -> RunStatus:
+async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = None, use_callback: bool = False) -> RunStatus:
     """Full orchestration pipeline:
 
     1. Create run record (or reuse existing from async path)
@@ -135,7 +135,7 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         context=full_context,
         model=req.model,
         maxTurns=req.max_turns,
-        callbackUrl=CALLBACK_URL,
+        callbackUrl=CALLBACK_URL if use_callback else None,
     )
 
     drone_resp = await dispatch(payload)

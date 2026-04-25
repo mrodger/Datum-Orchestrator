@@ -102,6 +102,27 @@ The review flagged `geom_sql = f"ST_SetSRID(ST_MakePoint({finding.lon}, {finding
 
 ---
 
+### 16. Callback/poll race condition — `src/orchestrator.py` + `src/server.py`
+**Status:** FIXED
+- Root cause: sync `orchestrate()` sent `callbackUrl` to drone, so both callback and poll path raced to ingest. Callback would claim ingestion first via `_claim_ingestion()`, then fail silently in background task, leaving status stuck at `'running'`.
+- Fix: Added `use_callback` parameter to `orchestrate()`. Sync path sends `callbackUrl=None` (polls instead). Async path sends callback URL.
+- Also added `_safe_ingest()` wrapper in server.py to catch background ingestion errors and mark status as `'failed'`.
+**Files changed:** `src/orchestrator.py`, `src/server.py`
+
+---
+
+## Verification
+
+Test dispatch (2026-04-25 02:49 UTC):
+- Task: "Research the current state of renewable energy adoption in New Zealand"
+- Drone task: `087e9277`, status: `complete`
+- **21 facts extracted**, 0 contradictions, quality 1.0
+- Ingestion status: `complete`, ingested_at populated
+- Spatial query returning geotagged facts with distance correctly
+- Full provenance chain intact (run_id → drone_task_id → extraction_index)
+
+---
+
 ## NOT FIXED (Architectural / Out of Scope)
 
 - **No auth on endpoints** — internal-only service on docker network. Auth belongs at API gateway level, not here.
