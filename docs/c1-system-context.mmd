@@ -1,0 +1,17 @@
+graph TB
+    classDef person fill:#1d3a5c,stroke:#0f1923,color:#fff
+    classDef system fill:#c89632,stroke:#0f1923,color:#0f1923
+    classDef external fill:#8e9fad,stroke:#0f1923,color:#0f1923
+
+    User["Datum Platform\n(Chat UI)"]:::person
+    Orch["Datum Orchestrator\nFastAPI + PostGIS + pgvector\n\nAccepts tasks, enriches with\nspatial context, dispatches to\ndrones, ingests results,\nmonitors drift"]:::system
+    Drone["Drone Fleet\n(Agent API)"]:::external
+    LLM["LiteLLM Gateway\n(GPT-5.4)"]:::external
+    Embed["OpenAI Embeddings\n(text-embedding-3-small)"]:::external
+
+    User -->|"POST /orchestrate\nPOST /orchestrate/async"| Orch
+    Orch -->|"POST /task\nGET /task/{id}"| Drone
+    Drone -->|"POST /callback"| Orch
+    Orch -->|"Extract findings\nDetect contradictions"| LLM
+    Orch -->|"Embed fact text"| Embed
+    User -->|"GET /knowledge\nGET /drift\nGET /runs"| Orch

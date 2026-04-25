@@ -1,0 +1,53 @@
+sequenceDiagram
+    participant Client as Datum Platform
+    participant API as FastAPI Server
+    participant Orch as Orchestrator
+    participant PG as PostGIS
+    participant Drone as Drone Fleet
+    participant LLM as LiteLLM (GPT-5.4)
+    participant OAI as OpenAI Embeddings
+
+    Client->>API: POST /orchestrate
+    API->>Orch: orchestrate(req)
+
+    Note over Orch,PG: 1. Create run record
+    Orch->>PG: INSERT orchestration_runs
+
+    Note over Orch,PG: 2. Spatial context
+    Orch->>PG: ST_DWithin nearby facts
+    PG-->>Orch: facts + contradictions + gaps
+
+    Note over Orch: 3. Select skills
+    Orch->>Orch: keyword match SKILL.md
+
+    Note over Orch,Drone: 4. Dispatch
+    Orch->>Drone: POST /task (enriched)
+    Drone-->>Orch: {taskId, status: queued}
+
+    Note over Orch,Drone: 5. Poll
+    loop Every 5s until complete
+        Orch->>Drone: GET /task/{id}
+        Drone-->>Orch: {status, output}
+    end
+
+    Note over Orch,OAI: 6. Ingest
+    Orch->>LLM: Extract findings (JSON)
+    LLM-->>Orch: [{content, lat, lon, ...}]
+
+    loop Each finding
+        Orch->>OAI: Embed text
+        OAI-->>Orch: vector[1536]
+        Orch->>PG: INSERT knowledge_facts
+        Orch->>LLM: Detect contradictions
+        LLM-->>Orch: {contradicted: [...]}
+        opt Contradictions found
+            Orch->>PG: UPDATE invalid_at
+        end
+    end
+
+    Note over Orch,PG: 7. Score + Drift
+    Orch->>PG: UPDATE outcome_quality
+    Orch->>PG: Drift sweep (3 checks)
+
+    Orch-->>API: RunStatus
+    API-->>Client: {id, facts_extracted, quality}

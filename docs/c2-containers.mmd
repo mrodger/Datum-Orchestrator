@@ -1,0 +1,45 @@
+graph TB
+    classDef api fill:#1d3a5c,stroke:#0f1923,color:#fff
+    classDef module fill:#2a5a8c,stroke:#0f1923,color:#fff
+    classDef db fill:#c89632,stroke:#0f1923,color:#0f1923
+    classDef external fill:#8e9fad,stroke:#0f1923,color:#0f1923
+
+    subgraph orchestrator ["Datum Orchestrator Container"]
+        direction TB
+        Server["server.py\nFastAPI endpoints\n/orchestrate /callback\n/knowledge /drift /runs"]:::api
+        Core["orchestrator.py\nPipeline coordination\nenrich > dispatch > ingest > score"]:::module
+        Ingest["ingest.py\nExtract findings\nEmbed + store\nContradiction detection"]:::module
+        Drift["drift.py\nStaleness check\nContradiction rate\nCentroid drift"]:::module
+        Spatial["spatial.py\nNearby facts query\nCoverage gaps\nContext rendering"]:::module
+        Skills["skills.py\nSKILL.md selection\nKeyword matching\nPrompt injection"]:::module
+        Dispatch["dispatch.py\nDrone HTTP client\nPoll until done"]:::module
+
+        Server --> Core
+        Core --> Dispatch
+        Core --> Ingest
+        Core --> Drift
+        Core --> Spatial
+        Core --> Skills
+    end
+
+    subgraph storage ["PostGIS + pgvector"]
+        direction TB
+        RunsTable["orchestration_runs\nFull provenance log"]:::db
+        FactsTable["knowledge_facts\nGeotagged + embedded"]:::db
+        CoverageTable["coverage_cells\n0.1-degree grid"]:::db
+        DriftTable["drift_events\nAudit log"]:::db
+        SkillTable["skill_scores\nEffectiveness tracking"]:::db
+    end
+
+    DroneAPI["Drone Fleet API"]:::external
+    LiteLLM["LiteLLM\nGPT-5.4"]:::external
+    OpenAI["OpenAI\nEmbeddings"]:::external
+
+    Core --> RunsTable
+    Ingest --> FactsTable
+    Ingest --> CoverageTable
+    Drift --> DriftTable
+    Core --> SkillTable
+    Dispatch --> DroneAPI
+    Ingest --> LiteLLM
+    Ingest --> OpenAI
