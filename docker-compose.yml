@@ -1,0 +1,49 @@
+services:
+  postgis:
+    build: ./db
+    container_name: orchestrator-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: orchestrator
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orchestrator_local}
+      POSTGRES_DB: orchestrator
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orchestrator"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  orchestrator:
+    build: .
+    container_name: datum-orchestrator
+    restart: unless-stopped
+    depends_on:
+      postgis:
+        condition: service_healthy
+    ports:
+      - "3020:8000"
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://orchestrator:${POSTGRES_PASSWORD:-orchestrator_local}@postgis:5432/orchestrator
+      - DRONE_API_URL=${DRONE_API_URL:-http://host.docker.internal:3010}
+      - LITELLM_BASE_URL=${LITELLM_BASE_URL:-http://host.docker.internal:4000}
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY:-drone2026}
+      - ORCHESTRATOR_MODEL=${ORCHESTRATOR_MODEL:-gpt-5.4}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./src:/app/src:ro
+      - ./skills:/app/skills:ro
+
+volumes:
+  pgdata:
+
+networks:
+  default:
+    name: orchestrator-internal
