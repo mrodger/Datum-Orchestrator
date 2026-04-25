@@ -338,8 +338,8 @@ async def ingest_report(
                         ) VALUES (
                             $1, $2, $3,
                             $4, $5, $6,
-                            ST_SetSRID(ST_MakePoint($7, $8), 4326), $9, $10,
-                            $11, $12, 'drone_report'
+                            ST_SetSRID(ST_MakePoint($7, $8), 4326), $9, NULL,
+                            $10, $11, 'drone_report'
                         )
                         ON CONFLICT (run_id, extraction_index) DO NOTHING
                         RETURNING id
@@ -347,7 +347,7 @@ async def ingest_report(
                         run_id, drone_task_id, idx,
                         finding.content, finding.category, finding.raw_excerpt,
                         finding.lon, finding.lat,
-                        finding.location_text, finding.confidence,
+                        finding.location_text,
                         embedding, finding.confidence,
                     )
                 else:

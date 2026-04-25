@@ -172,7 +172,20 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
 
     # ── 7. Poll for completion (sync path only) ────────────────
 
-    result = await poll_until_done(drone_resp.taskId)
+    try:
+        result = await poll_until_done(drone_resp.taskId)
+    except Exception as e:
+        logger.error("Poll failed for run %s task %s: %s", run_id, drone_resp.taskId, e)
+        await pool.execute(
+            """
+            UPDATE orchestration_runs
+            SET drone_status = 'timed_out', ingestion_status = 'skipped',
+                scoring_notes = $1
+            WHERE id = $2
+            """,
+            f"Poll error: {e}", run_id,
+        )
+        return await _build_run_status(pool, run_id)
 
     await pool.execute(
         """

@@ -16,7 +16,7 @@ from .db import close_pool, get_pool
 from .dispatch import check_drone_health, close_client as close_dispatch_client
 from .drift import get_drift_status, run_drift_sweep
 from .ingest import close_clients as close_ingest_clients
-from .ingest import _get_embed_client, _get_llm_client
+from .ingest import _get_llm_client
 from .models import (
     CallbackPayload,
     HealthResponse,
@@ -92,7 +92,13 @@ async def _run_orchestration_bg(run_id: UUID, req: OrchestrateRequest):
     except Exception as e:
         pool = await get_pool()
         await pool.execute(
-            "UPDATE orchestration_runs SET drone_status = 'failed', scoring_notes = $1 WHERE id = $2",
+            """
+            UPDATE orchestration_runs
+            SET drone_status = 'failed',
+                ingestion_status = CASE WHEN ingestion_status = 'pending' THEN 'skipped' ELSE ingestion_status END,
+                scoring_notes = $1
+            WHERE id = $2
+            """,
             str(e), run_id,
         )
 
@@ -124,8 +130,11 @@ async def handle_drone_callback(payload: CallbackPayload, bg: BackgroundTasks):
         task_id,
     )
     if not run:
-        # Callback for a task we didn't dispatch — ignore
         return {"status": "ignored", "reason": "unknown task"}
+
+    # Only accept callbacks while run is in a non-terminal drone state
+    if run["drone_status"] not in ("pending", "dispatched"):
+        return {"status": "ignored", "reason": f"run already terminal: {run['drone_status']}"}
 
     # Update drone status
     status = payload.status
