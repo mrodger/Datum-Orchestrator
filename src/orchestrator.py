@@ -138,7 +138,20 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
         callbackUrl=CALLBACK_URL if use_callback else None,
     )
 
-    drone_resp = await dispatch(payload)
+    try:
+        drone_resp = await dispatch(payload)
+    except Exception as e:
+        logger.error("Dispatch failed for run %s: %s", run_id, e)
+        await pool.execute(
+            """
+            UPDATE orchestration_runs
+            SET drone_status = 'dispatch_failed', ingestion_status = 'skipped',
+                scoring_notes = $1
+            WHERE id = $2
+            """,
+            f"Dispatch error: {e}", run_id,
+        )
+        return await _build_run_status(pool, run_id)
 
     await pool.execute(
         """
@@ -176,6 +189,17 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
 
     if result.status == "complete" and result.output:
         await _post_completion(pool, run_id, drone_resp.taskId, result.output, skill_names)
+    elif result.status != "complete":
+        # Failed/cancelled — mark ingestion as skipped so it doesn't stay 'pending'
+        await pool.execute(
+            """
+            UPDATE orchestration_runs
+            SET ingestion_status = 'skipped',
+                scoring_notes = $1
+            WHERE id = $2 AND ingestion_status = 'pending'
+            """,
+            f"Drone ended with status: {result.status}", run_id,
+        )
 
     # ── 9. Return ─────────────────────────────────────────────────
 

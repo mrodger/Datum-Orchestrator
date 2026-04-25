@@ -200,7 +200,9 @@ If none are contradicted, return {{"contradicted": [], "reasons": {{}}}}"""
     resp.raise_for_status()
     result = json.loads(resp.json()["choices"][0]["message"]["content"])
 
-    contradicted_ids = result.get("contradicted", [])
+    # Only accept IDs that were in the candidate set (LLM may hallucinate others)
+    candidate_id_set = {str(r["id"]) for r in candidates}
+    contradicted_ids = [cid for cid in result.get("contradicted", []) if cid in candidate_id_set]
     reasons = result.get("reasons", {})
     invalidated = 0
 
@@ -228,6 +230,11 @@ If none are contradicted, return {{"contradicted": [], "reasons": {{}}}}"""
             logger.error("Unexpected error invalidating fact %s: %s", cid, e)
 
     return invalidated
+
+
+def _cell_id(lat: float, lon: float) -> str:
+    """Derive coverage cell ID from coordinates. 0.1-degree grid (~11km at equator)."""
+    return f"{round(lat, 1)}_{round(lon, 1)}"
 
 
 async def _decrement_coverage_count(conn, fact_id: str):
@@ -407,13 +414,10 @@ async def _update_coverage(pool, findings: list[ExtractedFinding]):
         if f.lat is None or f.lon is None:
             continue
 
-        # Grid cell: round to 0.1 degree
         cell_lat = round(f.lat, 1)
         cell_lon = round(f.lon, 1)
-        cell_id = f"{cell_lat}_{cell_lon}"
-
-        # Half-width of cell in degrees
-        hw = 0.05
+        cell_id = _cell_id(f.lat, f.lon)
+        hw = 0.05  # half-width in degrees
 
         await pool.execute(
             """

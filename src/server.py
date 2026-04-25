@@ -141,18 +141,28 @@ async def handle_drone_callback(payload: CallbackPayload, bg: BackgroundTasks):
 
     # Trigger full post-completion pipeline in background (ingest + score + drift)
     if status == "complete" and output:
-        # Retrieve skill_names from the run's source_request
+        # Retrieve skill_names from the run's task_description
         skill_names = []
         try:
             from .skills import select_skills_for_task
-            src_req = await pool.fetchval(
+            task_desc = await pool.fetchval(
                 "SELECT task_description FROM orchestration_runs WHERE id = $1", run["id"]
             )
-            if src_req:
-                skill_names = select_skills_for_task(src_req)
+            if task_desc:
+                skill_names = select_skills_for_task(task_desc)
         except Exception:
             pass
         bg.add_task(_safe_post_completion, run["id"], task_id, output, skill_names)
+    elif status != "complete":
+        # Failed/cancelled — mark ingestion as skipped
+        await pool.execute(
+            """
+            UPDATE orchestration_runs
+            SET ingestion_status = 'skipped', scoring_notes = $1
+            WHERE id = $2 AND ingestion_status = 'pending'
+            """,
+            f"Drone callback with status: {status}", run["id"],
+        )
 
     return {"status": "accepted", "run_id": str(run["id"])}
 
@@ -338,7 +348,14 @@ async def handle_manual_ingest(payload: ManualIngestPayload):
         payload.output,
     )
 
-    facts, contradictions = await ingest_report(run_id, payload.drone_task_id, payload.output)
+    try:
+        facts, contradictions = await ingest_report(run_id, payload.drone_task_id, payload.output)
+    except Exception as e:
+        await pool.execute(
+            "UPDATE orchestration_runs SET ingestion_status = 'failed', scoring_notes = $1 WHERE id = $2",
+            f"Manual ingestion error: {e}", run_id,
+        )
+        raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
 
     return {
         "run_id": str(run_id),
