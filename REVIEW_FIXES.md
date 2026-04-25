@@ -187,10 +187,57 @@ Test dispatch 2 (2026-04-25 03:21 UTC — post re-review fixes):
 
 ---
 
+## Third-Pass Fixes (GPT-5.4 review 3, task e4ae45b5, score 7.4/10)
+
+### 26. F-01: Sync dispatch failures leave run with drone_status='pending'
+**Status:** FIXED
+- Dispatch wrapped in try/except. On failure: `drone_status='dispatch_failed'`, `ingestion_status='skipped'`, error in `scoring_notes`.
+**Files changed:** `src/orchestrator.py`
+
+### 27. F-02: Non-complete drone status leaves ingestion_status='pending' forever
+**Status:** FIXED
+- Both sync (poll) and callback paths now set `ingestion_status='skipped'` when drone returns failed/cancelled.
+**Files changed:** `src/orchestrator.py`, `src/server.py`
+
+### 28. F-08: Contradiction invalidation accepts any UUID from LLM
+**Status:** FIXED
+- LLM-returned IDs filtered against the pre-fetched candidate set. Hallucinated/out-of-scope IDs discarded.
+**Files changed:** `src/ingest.py`
+
+### 29. F-09: Duplicate cell_id derivation logic
+**Status:** FIXED
+- Added `_cell_id(lat, lon)` helper. `_update_coverage()` uses it instead of inline f-string.
+- `_decrement_coverage_count()` still derives from DB (correct — uses stored geom, not request params).
+**Files changed:** `src/ingest.py`
+
+### 30. F-10: Manual /ingest endpoint returns 500 with no failure state
+**Status:** FIXED
+- Wrapped in try/except. On failure: `ingestion_status='failed'` persisted, structured 500 response.
+**Files changed:** `src/server.py`
+
+### 31. F-16: Misleading comment in callback handler
+**Status:** FIXED
+- Changed "source_request" to "task_description" in comment and variable name.
+**Files changed:** `src/server.py`
+
+---
+
+## Third-Pass Verification
+
+Test dispatch (2026-04-25 03:33 UTC):
+- Task: "List invasive plant species affecting native bush in the Tararua Range"
+- Drone task: `53535d5e`, status: `complete`
+- **14 facts extracted**, 0 contradictions, quality 0.7
+- All terminal states correct
+
+---
+
 ## NOT FIXED (Architectural / Out of Scope)
 
-- **No auth on callback endpoint (F-03)** — internal-only service on docker network. Auth belongs at API gateway level. If boundary expands, add HMAC callback signing.
-- **orchestrator.py god function** — refactoring the 10-step loop is architectural work for a future sprint. Partially mitigated by extracting `_post_completion()` and `_build_run_status()`.
-- **No migration strategy** — valid concern, defer until schema stabilizes.
-- **Missing observability** — added `logging` module with structured messages. Full metrics/tracing is out of scope.
-- **Lazy client init without async lock (F-14/F-15)** — race is harmless (worst case: two clients created, one GC'd). Not worth the complexity of an async lock for an internal service.
+- **No auth on callback endpoint** — internal-only service on docker network. Auth belongs at API gateway level. If boundary expands, add HMAC callback signing.
+- **BackgroundTasks not durable (review 3 F-03)** — needs a queue (Celery/ARQ) or reconciliation job. Deferred until scale requires it.
+- **No watchdog for stuck dispatched runs (review 3 F-05)** — callback-missed runs can stay `dispatched` forever. Needs a cron/scheduled reconciliation sweep.
+- **Ingestion claim not recoverable (review 3 F-06)** — `running` after crash can't be retried. Needs `ingestion_started_at` + stale claim recovery.
+- **orchestrator.py god function** — partially mitigated by `_post_completion()` and `_build_run_status()`.
+- **No migration strategy** — defer until schema stabilizes.
+- **Lazy client init without async lock** — race is harmless for an internal service.
