@@ -15,8 +15,8 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from .db import close_pool, get_pool
 from .dispatch import check_drone_health, close_client as close_dispatch_client
 from .drift import get_drift_status, run_drift_sweep
-from .ingest import close_clients as close_ingest_clients, ingest_report
-# ingest_report used directly by /ingest endpoint; _post_completion wraps it for callback path
+from .ingest import close_clients as close_ingest_clients
+from .ingest import _get_embed_client, _get_llm_client
 from .models import (
     CallbackPayload,
     HealthResponse,
@@ -141,15 +141,15 @@ async def handle_drone_callback(payload: CallbackPayload, bg: BackgroundTasks):
 
     # Trigger full post-completion pipeline in background (ingest + score + drift)
     if status == "complete" and output:
-        # Retrieve skill_names from the run's task_description
+        # Use skills_used stored at dispatch time — avoids recomputing from description
+        # which would differ if skill files changed between dispatch and callback
         skill_names = []
         try:
-            from .skills import select_skills_for_task
-            task_desc = await pool.fetchval(
-                "SELECT task_description FROM orchestration_runs WHERE id = $1", run["id"]
+            row = await pool.fetchrow(
+                "SELECT skills_used FROM orchestration_runs WHERE id = $1", run["id"]
             )
-            if task_desc:
-                skill_names = select_skills_for_task(task_desc)
+            if row and row["skills_used"]:
+                skill_names = list(row["skills_used"])
         except Exception:
             pass
         bg.add_task(_safe_post_completion, run["id"], task_id, output, skill_names)
@@ -349,7 +349,8 @@ async def handle_manual_ingest(payload: ManualIngestPayload):
     )
 
     try:
-        facts, contradictions = await ingest_report(run_id, payload.drone_task_id, payload.output)
+        # Use _post_completion for full lifecycle: ingest + score + drift sweep
+        await _post_completion(pool, run_id, payload.drone_task_id, payload.output, [])
     except Exception as e:
         await pool.execute(
             "UPDATE orchestration_runs SET ingestion_status = 'failed', scoring_notes = $1 WHERE id = $2",
@@ -357,10 +358,13 @@ async def handle_manual_ingest(payload: ManualIngestPayload):
         )
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
 
+    row = await pool.fetchrow(
+        "SELECT facts_extracted, contradictions_found FROM orchestration_runs WHERE id = $1", run_id
+    )
     return {
         "run_id": str(run_id),
-        "facts_extracted": facts,
-        "contradictions_found": contradictions,
+        "facts_extracted": row["facts_extracted"] or 0,
+        "contradictions_found": row["contradictions_found"] or 0,
     }
 
 
@@ -378,11 +382,24 @@ async def handle_health():
 
     drone_status = await check_drone_health()
 
-    overall = "healthy" if db_status == "ok" and drone_status == "ok" else "degraded"
+    llm_status = "ok"
+    try:
+        client = _get_llm_client()
+        resp = await client.get("/v1/models", timeout=5.0)
+        if resp.status_code not in (200, 404):  # 404 means endpoint not supported but service is up
+            llm_status = f"http_{resp.status_code}"
+    except Exception as e:
+        llm_status = f"error: {e}"
+
+    embedding_status = "ok" if "OPENAI_API_KEY" in __import__("os").environ else "no_key"
+
+    overall = "healthy" if all(s == "ok" for s in [db_status, drone_status, llm_status]) else "degraded"
 
     return HealthResponse(
         status=overall,
         db=db_status,
         drone=drone_status,
+        llm=llm_status,
+        embedding=embedding_status,
         timestamp=datetime.now(timezone.utc),
     )

@@ -385,7 +385,10 @@ async def ingest_report(
                 total_contradictions += invalidated
 
     # 4. Update coverage cells only for successfully inserted geotagged findings
-    await _update_coverage(pool, inserted_findings)
+    try:
+        await _update_coverage(pool, inserted_findings)
+    except Exception as e:
+        logger.warning("Coverage update failed for run %s: %s", run_id, e)
 
     # 5. Update the orchestration run — always reach a terminal state
     await pool.execute(

@@ -169,4 +169,6 @@ class HealthResponse(BaseModel):
     status: str
     db: str
     drone: str
+    llm: str
+    embedding: str
     timestamp: datetime
