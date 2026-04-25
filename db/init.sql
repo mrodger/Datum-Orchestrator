@@ -167,6 +167,7 @@ CREATE TABLE skill_scores (
     scored_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX idx_skill_run ON skill_scores (skill_name, run_id);
 CREATE INDEX idx_skill_name ON skill_scores (skill_name, scored_at DESC);
 
 -- ============================================================

@@ -270,6 +270,48 @@ Test dispatch (2026-04-25 03:33 UTC):
 
 ---
 
+## Sixth-Pass Fixes (GPT-5.4-mini review 6, task 61593b8c, score 6.1/10 + Opus pass)
+
+### DO-REV6-04: Python/SQL rounding mismatch in `_decrement_coverage_count`
+**Status:** FIXED
+- Python `round()` uses banker's rounding; SQL `ROUND()` uses round-half-up. At 0.05 boundaries these diverge, targeting the wrong coverage cell.
+- Fix: `_decrement_coverage_count` now fetches fact coordinates and derives cell_id via Python `_cell_id()` (same path as insertion).
+**Files changed:** `src/ingest.py`
+
+### DO-REV6-06: Background handler overwrites specific terminal states
+**Status:** FIXED
+- `_run_orchestration_bg` now preserves existing terminal `drone_status` (e.g. `dispatch_failed`, `timed_out`) instead of unconditionally overwriting with `failed`.
+- Uses `CASE WHEN drone_status IN ('pending','dispatched') THEN 'failed' ELSE drone_status END`.
+**Files changed:** `src/server.py`
+
+### DO-REV6-01: Timed-out run accepts late callback (FALSE POSITIVE)
+**Not fixed** - `timed_out` is already not in `('pending','dispatched')`, so the callback guard at line 136 correctly rejects it.
+
+### DO-REV6-02: Failed ingestion non-retriable (BY DESIGN)
+**Not fixed** - Manual `/ingest` creates a new run with fresh `ingestion_status='pending'`. No API path re-ingests a failed run_id. Retry = new run.
+
+### DO-REV6-07: Callback guard should check ingestion_status (FALSE POSITIVE)
+**Not fixed** - Sync path sends `callbackUrl=None` (drone doesn't callback). Callback path is sole completion path. No race between the two.
+
+### OPUS-01 (HIGH): Empty output from complete drone leaves `ingestion_status` stuck
+**Status:** FIXED
+- Both sync (orchestrator.py:203) and callback (server.py:152) used `elif status != "complete"` which skipped the empty-output-but-complete case.
+- Fix: changed `elif` to `else` in both paths, with distinct reason strings.
+**Files changed:** `src/orchestrator.py`, `src/server.py`
+
+### OPUS-02 (MEDIUM): `skill_scores` has no duplicate guard
+**Status:** FIXED
+- Added `ON CONFLICT (skill_name, run_id) DO UPDATE` to skill_scores insert.
+- Added `CREATE UNIQUE INDEX idx_skill_run ON skill_scores (skill_name, run_id)` to init.sql.
+**Files changed:** `src/orchestrator.py`, `db/init.sql`
+
+### OPUS-03 (LOW): `_build_run_status` fetches `SELECT *` including large `drone_output_raw`
+**Status:** FIXED
+- Changed to explicit column list matching RunStatus fields only.
+**Files changed:** `src/orchestrator.py`
+
+---
+
 ## NOT FIXED (Architectural / Out of Scope)
 
 - **No auth on callback endpoint** — internal-only service on docker network. Auth belongs at API gateway level. If boundary expands, add HMAC callback signing.

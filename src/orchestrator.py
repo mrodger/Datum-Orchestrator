@@ -202,8 +202,9 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
 
     if result.status == "complete" and result.output:
         await _post_completion(pool, run_id, drone_resp.taskId, result.output, skill_names)
-    elif result.status != "complete":
-        # Failed/cancelled — mark ingestion as skipped so it doesn't stay 'pending'
+    else:
+        # Failed/cancelled/empty output — mark ingestion as skipped
+        reason = f"Drone ended with status: {result.status}" if result.status != "complete" else "Drone completed with empty output"
         await pool.execute(
             """
             UPDATE orchestration_runs
@@ -211,7 +212,7 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
                 scoring_notes = $1
             WHERE id = $2 AND ingestion_status = 'pending'
             """,
-            f"Drone ended with status: {result.status}", run_id,
+            reason, run_id,
         )
 
     # ── 9. Return ─────────────────────────────────────────────────
@@ -246,6 +247,11 @@ async def _post_completion(
                 """
                 INSERT INTO skill_scores (skill_name, run_id, outcome_quality, fact_yield, contradiction_count)
                 VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (skill_name, run_id) DO UPDATE SET
+                    outcome_quality = EXCLUDED.outcome_quality,
+                    fact_yield = EXCLUDED.fact_yield,
+                    contradiction_count = EXCLUDED.contradiction_count,
+                    scored_at = NOW()
                 """,
                 skill, run_id, quality, facts_count, contradictions,
             )
@@ -259,7 +265,13 @@ async def _post_completion(
 
 async def _build_run_status(pool, run_id: UUID) -> RunStatus:
     """Read current run state from DB and return RunStatus."""
-    row = await pool.fetchrow("SELECT * FROM orchestration_runs WHERE id = $1", run_id)
+    row = await pool.fetchrow(
+        """SELECT id, task_description, drone_task_id, drone_status, ingestion_status,
+                  facts_extracted, contradictions_found, outcome_quality,
+                  created_at, dispatched_at, drone_completed_at, ingested_at
+           FROM orchestration_runs WHERE id = $1""",
+        run_id,
+    )
     return RunStatus(
         id=row["id"],
         task_description=row["task_description"],

@@ -238,17 +238,23 @@ def _cell_id(lat: float, lon: float) -> str:
 
 
 async def _decrement_coverage_count(conn, fact_id: str):
-    """Decrement active_fact_count on the coverage cell containing this fact."""
+    """Decrement active_fact_count on the coverage cell containing this fact.
+
+    Derives cell_id in Python (using _cell_id) to match insertion-time derivation.
+    SQL ROUND uses round-half-up; Python round uses banker's rounding — deriving
+    in Python ensures the same cell is targeted.
+    """
     try:
-        await conn.execute(
-            """
-            UPDATE coverage_cells SET active_fact_count = GREATEST(0, active_fact_count - 1)
-            WHERE cell_id = (
-                SELECT ROUND(ST_Y(geom)::numeric, 1) || '_' || ROUND(ST_X(geom)::numeric, 1)
-                FROM knowledge_facts WHERE id = $1::uuid AND geom IS NOT NULL
-            )
-            """,
+        row = await conn.fetchrow(
+            "SELECT ST_Y(geom) AS lat, ST_X(geom) AS lon FROM knowledge_facts WHERE id = $1::uuid AND geom IS NOT NULL",
             fact_id,
+        )
+        if not row:
+            return
+        cell = _cell_id(row["lat"], row["lon"])
+        await conn.execute(
+            "UPDATE coverage_cells SET active_fact_count = GREATEST(0, active_fact_count - 1) WHERE cell_id = $1",
+            cell,
         )
     except Exception as e:
         logger.warning("Failed to decrement coverage for fact %s: %s", fact_id, e)

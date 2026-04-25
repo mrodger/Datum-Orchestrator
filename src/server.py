@@ -94,7 +94,7 @@ async def _run_orchestration_bg(run_id: UUID, req: OrchestrateRequest):
         await pool.execute(
             """
             UPDATE orchestration_runs
-            SET drone_status = 'failed',
+            SET drone_status = CASE WHEN drone_status IN ('pending', 'dispatched') THEN 'failed' ELSE drone_status END,
                 ingestion_status = CASE WHEN ingestion_status = 'pending' THEN 'skipped' ELSE ingestion_status END,
                 scoring_notes = $1
             WHERE id = $2
@@ -162,15 +162,16 @@ async def handle_drone_callback(payload: CallbackPayload, bg: BackgroundTasks):
         except Exception:
             pass
         bg.add_task(_safe_post_completion, run["id"], task_id, output, skill_names)
-    elif status != "complete":
-        # Failed/cancelled — mark ingestion as skipped
+    else:
+        # Failed/cancelled/empty output — mark ingestion as skipped
+        reason = f"Drone callback with status: {status}" if status != "complete" else "Drone completed with empty output"
         await pool.execute(
             """
             UPDATE orchestration_runs
             SET ingestion_status = 'skipped', scoring_notes = $1
             WHERE id = $2 AND ingestion_status = 'pending'
             """,
-            f"Drone callback with status: {status}", run["id"],
+            reason, run["id"],
         )
 
     return {"status": "accepted", "run_id": str(run["id"])}
