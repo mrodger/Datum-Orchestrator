@@ -231,15 +231,11 @@ async def ingest_report(
         # Embed
         embedding = await embed_text(finding.content)
 
-        # Build geometry
-        geom_sql = None
-        if finding.lat is not None and finding.lon is not None:
-            geom_sql = f"ST_SetSRID(ST_MakePoint({finding.lon}, {finding.lat}), 4326)"
-
         # Insert fact with full provenance
-        if geom_sql:
+        has_geom = finding.lat is not None and finding.lon is not None
+        if has_geom:
             row = await pool.fetchrow(
-                f"""
+                """
                 INSERT INTO knowledge_facts (
                     run_id, drone_task_id, extraction_index,
                     content, category, raw_excerpt,
@@ -248,14 +244,15 @@ async def ingest_report(
                 ) VALUES (
                     $1, $2, $3,
                     $4, $5, $6,
-                    {geom_sql}, $7, $8,
-                    $9, $10, 'drone_report'
+                    ST_SetSRID(ST_MakePoint($7, $8), 4326), $9, $10,
+                    $11, $12, 'drone_report'
                 )
                 RETURNING id
                 """,
                 run_id, drone_task_id, idx,
                 finding.content, finding.category, finding.raw_excerpt,
-                finding.location_text, finding.confidence if finding.lat else None,
+                finding.lon, finding.lat,
+                finding.location_text, finding.confidence,
                 embedding, finding.confidence,
             )
         else:
