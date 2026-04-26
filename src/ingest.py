@@ -38,7 +38,7 @@ def _get_llm_client() -> httpx.AsyncClient:
         _llm_client = httpx.AsyncClient(
             base_url=LITELLM_URL,
             headers={"Authorization": f"Bearer {LITELLM_KEY}"},
-            timeout=60.0,
+            timeout=120.0,
         )
     return _llm_client
 
@@ -101,7 +101,7 @@ async def extract_findings(drone_output: str) -> ExtractionResult:
                 {"role": "user", "content": drone_output},
             ],
             "response_format": {"type": "json_object"},
-            "max_completion_tokens": 4096,
+            "max_completion_tokens": 8192,
         },
     )
     resp.raise_for_status()
