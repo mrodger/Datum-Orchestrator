@@ -13,7 +13,7 @@ from uuid import UUID
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 
 from .db import close_pool, get_pool
-from .dispatch import check_drone_health, close_client as close_dispatch_client
+from .dispatch import check_drone_health, close_client as close_dispatch_client, get_task
 from .drift import get_drift_status, run_drift_sweep
 from .ingest import close_clients as close_ingest_clients
 from .ingest import _get_llm_client
@@ -374,6 +374,63 @@ async def handle_manual_ingest(payload: ManualIngestPayload):
     )
     return {
         "run_id": str(run_id),
+        "facts_extracted": row["facts_extracted"] or 0,
+        "contradictions_found": row["contradictions_found"] or 0,
+    }
+
+
+# ── POST /ingest/from-drone/{task_id} ────────────────────────────
+
+@app.post("/ingest/from-drone/{task_id}")
+async def handle_ingest_from_drone(task_id: str):
+    """Fetch a completed drone task by ID and ingest its output into PostGIS.
+
+    Use to backfill tasks dispatched outside the orchestrator (e.g. via drone.py CLI).
+    Returns run_id, facts_extracted, contradictions_found.
+    """
+    import json
+
+    try:
+        result = await get_task(task_id)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch drone task: {e}")
+
+    if result.status != "complete":
+        raise HTTPException(status_code=422, detail=f"Task not complete (status: {result.status})")
+    if not result.output:
+        raise HTTPException(status_code=422, detail="Task has no output to ingest")
+
+    pool = await get_pool()
+    run_id = await pool.fetchval(
+        """
+        INSERT INTO orchestration_runs (
+            source, source_request, task_description, task_instructions,
+            drone_task_id, drone_status, drone_output_raw,
+            drone_completed_at, ingestion_status
+        ) VALUES ('backfill', $1, $2, '', $3, 'complete', $4, NOW(), 'pending')
+        RETURNING id
+        """,
+        json.dumps({"task_id": task_id}),
+        result.description or task_id,
+        task_id,
+        result.output,
+    )
+
+    try:
+        await _post_completion(pool, run_id, task_id, result.output, [])
+    except Exception as e:
+        await pool.execute(
+            "UPDATE orchestration_runs SET ingestion_status = 'failed', scoring_notes = $1 WHERE id = $2",
+            f"Backfill error: {e}", run_id,
+        )
+        raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
+
+    row = await pool.fetchrow(
+        "SELECT facts_extracted, contradictions_found FROM orchestration_runs WHERE id = $1", run_id
+    )
+    return {
+        "run_id": str(run_id),
+        "task_id": task_id,
         "facts_extracted": row["facts_extracted"] or 0,
         "contradictions_found": row["contradictions_found"] or 0,
     }
