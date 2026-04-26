@@ -101,7 +101,7 @@ async def extract_findings(drone_output: str) -> ExtractionResult:
                 {"role": "user", "content": drone_output},
             ],
             "response_format": {"type": "json_object"},
-            "max_completion_tokens": 8192,
+            "max_completion_tokens": 16384,
         },
     )
     resp.raise_for_status()
