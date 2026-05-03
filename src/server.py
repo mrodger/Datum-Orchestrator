@@ -140,13 +140,29 @@ async def handle_drone_callback(payload: CallbackPayload, bg: BackgroundTasks):
     VALID_DRONE_STATUSES = {"complete", "failed", "cancelled"}
     status = payload.status if payload.status in VALID_DRONE_STATUSES else "failed"
     output = payload.output
+
+    # Fetch full task details for cost/token tracking
+    cost_usd = tokens_in = tokens_out = num_turns = duration_ms = None
+    try:
+        full = await get_task(task_id)
+        cost_usd = full.costUsd
+        num_turns = full.numTurns
+        duration_ms = full.durationMs
+        if full.tokenUsage:
+            tokens_in = full.tokenUsage.get("input")
+            tokens_out = full.tokenUsage.get("output")
+    except Exception:
+        pass  # non-fatal; cost columns stay null
+
     await pool.execute(
         """
         UPDATE orchestration_runs
-        SET drone_status = $1, drone_output_raw = $2, drone_completed_at = NOW()
-        WHERE id = $3
+        SET drone_status = $1, drone_output_raw = $2, drone_completed_at = NOW(),
+            cost_usd = $3, tokens_input = $4, tokens_output = $5,
+            num_turns = $6, duration_ms = $7
+        WHERE id = $8
         """,
-        status, output, run["id"],
+        status, output, cost_usd, tokens_in, tokens_out, num_turns, duration_ms, run["id"],
     )
 
     # Trigger full post-completion pipeline in background (ingest + score + drift)
@@ -434,6 +450,70 @@ async def handle_ingest_from_drone(task_id: str):
         "facts_extracted": row["facts_extracted"] or 0,
         "contradictions_found": row["contradictions_found"] or 0,
     }
+
+
+# ── POST /reingest/all-failed ─────────────────────────────────────
+# NOTE: must be defined before /reingest/{run_id} — FastAPI matches in order
+
+@app.post("/reingest/all-failed")
+async def handle_reingest_all_failed(bg: BackgroundTasks):
+    """Queue reingestion for every run where ingestion_status = 'failed' and output is stored.
+
+    Returns count of runs queued. Runs without stored output are skipped.
+    """
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        SELECT id, drone_task_id, drone_output_raw, skills_used
+        FROM orchestration_runs
+        WHERE ingestion_status = 'failed' AND drone_output_raw IS NOT NULL
+        ORDER BY created_at ASC
+        """,
+    )
+    queued = 0
+    for row in rows:
+        await pool.execute(
+            "UPDATE orchestration_runs SET ingestion_status = 'pending', scoring_notes = NULL WHERE id = $1",
+            row["id"],
+        )
+        skill_names = list(row["skills_used"]) if row["skills_used"] else []
+        bg.add_task(_safe_post_completion, row["id"], row["drone_task_id"], row["drone_output_raw"], skill_names)
+        queued += 1
+
+    return {"queued": queued}
+
+
+# ── POST /reingest/{run_id} ──────────────────────────────────────
+
+@app.post("/reingest/{run_id}")
+async def handle_reingest(run_id: UUID, bg: BackgroundTasks):
+    """Retry a failed ingestion using the stored drone_output_raw.
+
+    Only valid for runs where ingestion_status = 'failed' and drone_output_raw is set.
+    Resets status to 'pending' and re-triggers the full post-completion pipeline.
+    """
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "SELECT id, drone_task_id, drone_output_raw, ingestion_status, skills_used FROM orchestration_runs WHERE id = $1",
+        run_id,
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if row["ingestion_status"] != "failed":
+        raise HTTPException(
+            status_code=422,
+            detail=f"ingestion_status is '{row['ingestion_status']}', not 'failed'",
+        )
+    if not row["drone_output_raw"]:
+        raise HTTPException(status_code=422, detail="No drone_output_raw stored — cannot reingest")
+
+    await pool.execute(
+        "UPDATE orchestration_runs SET ingestion_status = 'pending', scoring_notes = NULL WHERE id = $1",
+        run_id,
+    )
+    skill_names = list(row["skills_used"]) if row["skills_used"] else []
+    bg.add_task(_safe_post_completion, run_id, row["drone_task_id"], row["drone_output_raw"], skill_names)
+    return {"run_id": str(run_id), "status": "reingestion_queued"}
 
 
 # ── GET /health ──────────────────────────────────────────────────

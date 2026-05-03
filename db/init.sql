@@ -31,10 +31,19 @@ CREATE TABLE orchestration_runs (
     drone_status        TEXT DEFAULT 'pending',          -- pending, dispatched, complete, failed
     drone_output_raw    TEXT,                            -- verbatim drone output (full log)
 
+    -- Drone cost + usage
+    cost_usd            FLOAT,                          -- drone run cost in USD
+    tokens_input        INT,                            -- drone input tokens
+    tokens_output       INT,                            -- drone output tokens
+    num_turns           INT,                            -- drone conversation turns
+    duration_ms         INT,                            -- drone wall-clock time (ms)
+
     -- Ingestion results
     facts_extracted     INT DEFAULT 0,
     contradictions_found INT DEFAULT 0,
     ingestion_status    TEXT DEFAULT 'pending',          -- pending, complete, failed, skipped
+    extraction_tokens_input  INT,                       -- LLM tokens used for fact extraction
+    extraction_tokens_output INT,
 
     -- Scoring
     outcome_quality     FLOAT,                          -- 0-1, computed post-ingestion
