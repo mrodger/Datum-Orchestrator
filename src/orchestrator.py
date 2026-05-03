@@ -192,14 +192,19 @@ async def orchestrate(req: OrchestrateRequest, existing_run_id: UUID | None = No
     if result.status not in VALID_DRONE_STATUSES:
         logger.warning("Unknown drone status '%s' for task %s — normalized to 'failed'", result.status, drone_resp.taskId)
 
+    tokens_in = result.tokenUsage.get("input") if result.tokenUsage else None
+    tokens_out = result.tokenUsage.get("output") if result.tokenUsage else None
     await pool.execute(
         """
         UPDATE orchestration_runs
-        SET drone_status = $1, drone_output_raw = $2, drone_completed_at = NOW()
-        WHERE id = $3
+        SET drone_status = $1, drone_output_raw = $2, drone_completed_at = NOW(),
+            cost_usd = $3, tokens_input = $4, tokens_output = $5,
+            num_turns = $6, duration_ms = $7
+        WHERE id = $8
         """,
-        drone_status,
-        result.output,
+        drone_status, result.output,
+        result.costUsd, tokens_in, tokens_out,
+        result.numTurns, result.durationMs,
         run_id,
     )
 
@@ -273,6 +278,8 @@ async def _build_run_status(pool, run_id: UUID) -> RunStatus:
     row = await pool.fetchrow(
         """SELECT id, task_description, drone_task_id, drone_status, ingestion_status,
                   facts_extracted, contradictions_found, outcome_quality,
+                  cost_usd, tokens_input, tokens_output, num_turns, duration_ms,
+                  extraction_tokens_input, extraction_tokens_output,
                   created_at, dispatched_at, drone_completed_at, ingested_at
            FROM orchestration_runs WHERE id = $1""",
         run_id,
@@ -286,6 +293,13 @@ async def _build_run_status(pool, run_id: UUID) -> RunStatus:
         facts_extracted=row["facts_extracted"] or 0,
         contradictions_found=row["contradictions_found"] or 0,
         outcome_quality=row["outcome_quality"],
+        cost_usd=row["cost_usd"],
+        tokens_input=row["tokens_input"],
+        tokens_output=row["tokens_output"],
+        num_turns=row["num_turns"],
+        duration_ms=row["duration_ms"],
+        extraction_tokens_input=row["extraction_tokens_input"],
+        extraction_tokens_output=row["extraction_tokens_output"],
         created_at=row["created_at"],
         dispatched_at=row["dispatched_at"],
         drone_completed_at=row["drone_completed_at"],

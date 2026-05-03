@@ -9,9 +9,11 @@ Every extracted fact gets full provenance:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
+import random
 from uuid import UUID
 
 import asyncpg
@@ -27,9 +29,24 @@ LITELLM_KEY = os.environ.get("LITELLM_API_KEY", "drone2026")
 ORCH_MODEL = os.environ.get("ORCHESTRATOR_MODEL", "gpt-5.4")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 EMBEDDING_DIM = 1536  # text-embedding-3-small
+_MAX_RETRIES = 3
+_RETRY_DELAYS = [5.0, 15.0, 45.0]  # seconds; jitter added at runtime
 
 _llm_client: httpx.AsyncClient | None = None
 _embed_client: httpx.AsyncClient | None = None
+_extraction_sem: asyncio.Semaphore | None = None  # limits concurrent LLM extraction calls
+
+
+def _get_extraction_sem() -> asyncio.Semaphore:
+    """Semaphore limiting concurrent fact-extraction LLM calls.
+
+    Prevents rate-limit pile-ups when many ingestions are queued simultaneously.
+    Lazily created on first use within the running event loop.
+    """
+    global _extraction_sem
+    if _extraction_sem is None:
+        _extraction_sem = asyncio.Semaphore(2)
+    return _extraction_sem
 
 
 def _get_llm_client() -> httpx.AsyncClient:
@@ -89,31 +106,72 @@ Rules:
 
 
 async def extract_findings(drone_output: str) -> ExtractionResult:
-    """Use GPT-5.4 to extract structured findings from raw drone output."""
+    """Use GPT-5.4 to extract structured findings from raw drone output.
+
+    Retries up to _MAX_RETRIES times on 429 with exponential backoff + jitter.
+    All other HTTP errors raise immediately.
+    """
     client = _get_llm_client()
+    # Truncate very long outputs to avoid hitting context limits.
+    # 120k chars ≈ 30k tokens — leaves room for the system prompt and JSON response.
+    MAX_INPUT_CHARS = 120_000
+    if len(drone_output) > MAX_INPUT_CHARS:
+        logger.warning(
+            "Drone output is %d chars — truncating to %d for extraction",
+            len(drone_output), MAX_INPUT_CHARS,
+        )
+        drone_output = drone_output[:MAX_INPUT_CHARS] + "\n\n[TRUNCATED]"
 
-    resp = await client.post(
-        "/v1/chat/completions",
-        json={
-            "model": ORCH_MODEL,
-            "messages": [
-                {"role": "system", "content": EXTRACTION_PROMPT},
-                {"role": "user", "content": drone_output},
-            ],
-            "response_format": {"type": "json_object"},
-            "max_completion_tokens": 16384,
-        },
-    )
-    resp.raise_for_status()
-    data = resp.json()
+    payload = {
+        "model": ORCH_MODEL,
+        "messages": [
+            {"role": "system", "content": EXTRACTION_PROMPT},
+            {"role": "user", "content": drone_output},
+        ],
+        "response_format": {"type": "json_object"},
+        "max_completion_tokens": 32768,
+    }
 
-    content = data["choices"][0]["message"]["content"]
-    parsed = json.loads(content)
+    resp = None
+    for attempt in range(_MAX_RETRIES):
+        resp = await client.post("/v1/chat/completions", json=payload)
+        if resp.status_code == 429:
+            if attempt == _MAX_RETRIES - 1:
+                resp.raise_for_status()
+            delay = _RETRY_DELAYS[attempt] + random.uniform(0, 2)
+            logger.warning(
+                "Rate limited (429) on extraction attempt %d/%d — retrying in %.1fs",
+                attempt + 1, _MAX_RETRIES, delay,
+            )
+            await asyncio.sleep(delay)
+            continue
+        resp.raise_for_status()
+        data = resp.json()
+        choices = data.get("choices") or []
+        if not choices:
+            # LiteLLM can return 200 with empty choices under load — treat as retriable
+            if attempt == _MAX_RETRIES - 1:
+                raise ValueError(f"LLM returned empty choices after {_MAX_RETRIES} attempts: {resp.text[:200]}")
+            delay = _RETRY_DELAYS[attempt] + random.uniform(0, 2)
+            logger.warning(
+                "Empty choices on extraction attempt %d/%d — retrying in %.1fs",
+                attempt + 1, _MAX_RETRIES, delay,
+            )
+            await asyncio.sleep(delay)
+            continue
+        content = choices[0]["message"]["content"]
+        parsed = json.loads(content)
+        usage = data.get("usage") or {}
+        break
+    else:
+        raise ValueError(f"Extraction failed after {_MAX_RETRIES} attempts")
 
     findings = [ExtractedFinding(**f) for f in parsed.get("findings", [])]
     return ExtractionResult(
         findings=findings,
         extraction_notes=parsed.get("extraction_notes"),
+        tokens_input=usage.get("prompt_tokens"),
+        tokens_output=usage.get("completion_tokens"),
     )
 
 
@@ -300,14 +358,22 @@ async def ingest_report(
         )
         return (row["facts_extracted"], row["contradictions_found"]) if row else (0, 0)
 
-    # 1. Extract findings
+    # 1. Extract findings (semaphore limits concurrent LLM calls → avoids 429 pile-up)
+    extraction = None
     try:
-        extraction = await extract_findings(drone_output)
+        async with _get_extraction_sem():
+            extraction = await extract_findings(drone_output)
+        # Persist extraction token usage immediately (best-effort)
+        if extraction.tokens_input is not None or extraction.tokens_output is not None:
+            await pool.execute(
+                "UPDATE orchestration_runs SET extraction_tokens_input = $1, extraction_tokens_output = $2 WHERE id = $3",
+                extraction.tokens_input, extraction.tokens_output, run_id,
+            )
     except Exception as e:
-        logger.error("Extraction failed for run %s: %s", run_id, e)
+        logger.error("Extraction failed for run %s: %s (%s)", run_id, e, type(e).__name__, exc_info=True)
         await pool.execute(
             "UPDATE orchestration_runs SET ingestion_status = 'failed', scoring_notes = $1 WHERE id = $2",
-            f"Extraction error: {e}", run_id,
+            f"Extraction error: {type(e).__name__}: {e}", run_id,
         )
         return 0, 0
 

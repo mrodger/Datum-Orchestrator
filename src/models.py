@@ -33,6 +33,13 @@ class RunStatus(BaseModel):
     facts_extracted: int
     contradictions_found: int
     outcome_quality: float | None
+    cost_usd: float | None = None
+    tokens_input: int | None = None
+    tokens_output: int | None = None
+    num_turns: int | None = None
+    duration_ms: int | None = None
+    extraction_tokens_input: int | None = None
+    extraction_tokens_output: int | None = None
     created_at: datetime
     dispatched_at: datetime | None
     drone_completed_at: datetime | None
@@ -62,6 +69,8 @@ class DroneTaskResult(BaseModel):
     output: str | None = None
     tokenUsage: dict | None = None
     costUsd: float | None = None
+    numTurns: int | None = None
+    durationMs: int | None = None
     duration: float | None = None
     error: str | None = None
 
@@ -81,6 +90,8 @@ class ExtractedFinding(BaseModel):
 class ExtractionResult(BaseModel):
     findings: list[ExtractedFinding]
     extraction_notes: str | None = None
+    tokens_input: int | None = None
+    tokens_output: int | None = None
 
 
 # ── Spatial context ──────────────────────────────────────────────

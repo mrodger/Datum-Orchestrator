@@ -83,55 +83,31 @@
   <rect x="624" y="126" width="216" height="26" rx="4" fill="#C89632"/>
   <text x="732" y="144" text-anchor="middle" font-size="11" font-weight="bold" fill="#FFFFFF">VARIANCE: 0.04  ·  STATUS: LOOP_FLAG</text>
 
-  <!-- Scatter: 8 points tightly clustered near center-right -->
-  <!-- Cluster center approx (732, 248) -->
+  <!-- Scatter: 8 points tightly clustered — no per-point labels, cluster reads as unit -->
+  <!-- Cluster center (652, 262) -->
 
-  <!-- Point 1 (oldest) -->
-  <circle cx="714" cy="240" r="7" fill="#8E9FAD" stroke="#5A6F80" stroke-width="1"/>
-  <text x="714" y="255" text-anchor="middle" font-size="8" fill="#8E9FAD">t-7</text>
+  <circle cx="634" cy="254" r="7" fill="#8E9FAD" stroke="#5A6F80" stroke-width="1"/>
+  <circle cx="662" cy="267" r="7" fill="#8E9FAD" stroke="#5A6F80" stroke-width="1"/>
+  <circle cx="643" cy="274" r="7" fill="#7B8FA0" stroke="#5A6F80" stroke-width="1"/>
+  <circle cx="660" cy="246" r="7" fill="#7B8FA0" stroke="#5A6F80" stroke-width="1"/>
+  <circle cx="669" cy="272" r="7" fill="#5A6F80" stroke="#3D5468" stroke-width="1"/>
+  <circle cx="636" cy="264" r="7" fill="#5A6F80" stroke="#3D5468" stroke-width="1"/>
+  <circle cx="654" cy="278" r="7" fill="#2C4A60" stroke="#1D3A5C" stroke-width="1"/>
+  <!-- Most recent (gold) -->
+  <circle cx="648" cy="250" r="9" fill="#C89632" stroke="#8A6200" stroke-width="1.5"/>
+  <text x="648" y="238" text-anchor="middle" font-size="8" font-weight="bold" fill="#8A6200">now</text>
 
-  <!-- Point 2 -->
-  <circle cx="748" cy="256" r="7" fill="#8E9FAD" stroke="#5A6F80" stroke-width="1"/>
-  <text x="748" y="271" text-anchor="middle" font-size="8" fill="#8E9FAD">t-6</text>
+  <!-- Tight bounding circle -->
+  <circle cx="652" cy="262" r="36" fill="none" stroke="#C89632" stroke-width="1.5" stroke-dasharray="5,3"/>
 
-  <!-- Point 3 -->
-  <circle cx="722" cy="268" r="7" fill="#7B8FA0" stroke="#5A6F80" stroke-width="1"/>
-  <text x="722" y="283" text-anchor="middle" font-size="8" fill="#7B8FA0">t-5</text>
+  <!-- Single cluster labels — replaces per-point RETRY/t-X clutter -->
+  <text x="652" y="310" text-anchor="middle" font-size="9" fill="#8A6200" font-style="italic">window: t-7 → now</text>
 
-  <!-- Point 4 -->
-  <circle cx="742" cy="232" r="7" fill="#7B8FA0" stroke="#5A6F80" stroke-width="1"/>
-  <text x="742" y="220" text-anchor="middle" font-size="8" fill="#7B8FA0">t-4</text>
-
-  <!-- Point 5 -->
-  <circle cx="756" cy="270" r="7" fill="#5A6F80" stroke="#3D5468" stroke-width="1"/>
-  <text x="756" y="258" text-anchor="middle" font-size="8" fill="#5A6F80">t-3</text>
-
-  <!-- Point 6 -->
-  <circle cx="708" cy="260" r="7" fill="#5A6F80" stroke="#3D5468" stroke-width="1"/>
-  <text x="708" y="248" text-anchor="middle" font-size="8" fill="#5A6F80">t-2</text>
-
-  <!-- Point 7 -->
-  <circle cx="736" cy="275" r="7" fill="#2C4A60" stroke="#1D3A5C" stroke-width="1"/>
-  <text x="736" y="290" text-anchor="middle" font-size="8" fill="#2C4A60">t-1</text>
-
-  <!-- Point 8 (most recent, gold) -->
-  <circle cx="726" cy="248" r="9" fill="#C89632" stroke="#8A6200" stroke-width="1.5"/>
-  <text x="726" y="236" text-anchor="middle" font-size="8" font-weight="bold" fill="#8A6200">now</text>
-
-  <!-- Tight bounding circle showing cluster -->
-  <circle cx="732" cy="255" r="38" fill="none" stroke="#C89632" stroke-width="1.5" stroke-dasharray="5,3"/>
-
-  <!-- RETRY × 4 label near cluster -->
-  <rect x="768" y="222" width="84" height="22" rx="3" fill="#C89632"/>
-  <text x="810" y="237" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">RETRY × 4</text>
-  <!-- callout line to cluster -->
-  <line x1="768" y1="233" x2="770" y2="250" stroke="#C89632" stroke-width="1"/>
-
-  <!-- Intent labels all same (RETRY) showing repetition -->
-  <text x="714" y="232" text-anchor="middle" font-size="8" fill="#8A6200">RETRY</text>
-  <text x="750" y="225" text-anchor="middle" font-size="8" fill="#8A6200">RETRY</text>
-  <text x="758" y="263" text-anchor="middle" font-size="8" fill="#8A6200">RETRY</text>
-  <text x="709" y="252" text-anchor="middle" font-size="8" fill="#8A6200">RETRY</text>
+  <!-- RETRY × 4 badge with callout -->
+  <rect x="700" y="227" width="96" height="24" rx="3" fill="#C89632"/>
+  <text x="748" y="243" text-anchor="middle" font-size="11" font-weight="bold" fill="#FFFFFF">RETRY × 4</text>
+  <line x1="700" y1="239" x2="689" y2="256" stroke="#C89632" stroke-width="1.5"/>
+  <polygon points="685,254 692,260 693,251" fill="#C89632"/>
 
   <!-- Low variance label inside panel -->
   <text x="732" y="390" text-anchor="middle" font-size="11" fill="#8A6200">actions collapse to single intent region</text>
