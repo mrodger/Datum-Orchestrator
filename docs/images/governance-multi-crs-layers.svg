@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 580" width="980" height="580" font-family="Calibri, Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="980" height="580" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="490" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D3A5C">Multi-CRS Layer Evaluation</text>
+  <text x="490" y="58" text-anchor="middle" font-size="12" fill="#5A6F80">One action evaluated simultaneously against three independent CRS modes — like a GIS layer stack</text>
+  <line x1="100" y1="66" x2="880" y2="66" stroke="#C89632" stroke-width="1.5"/>
+
+  <!-- ACTION ENTRY -->
+  <!-- Action point -->
+  <circle cx="200" cy="100" r="11" fill="#C89632" stroke="#8A6200" stroke-width="1.5"/>
+  <text x="200" y="85" text-anchor="middle" font-size="11" font-weight="bold" fill="#1D3A5C">incoming action</text>
+  <!-- Arrow down into Layer 1 -->
+  <line x1="200" y1="111" x2="200" y2="145" stroke="#1D3A5C" stroke-width="2"/>
+  <polygon points="195,143 205,143 200,152" fill="#1D3A5C"/>
+
+  <!-- ===== LAYER 1: GOVERNANCE CRS ===== -->
+  <!-- Shadow -->
+  <rect x="106" y="156" width="768" height="84" rx="4" fill="#DDDDD5"/>
+  <!-- Main layer -->
+  <rect x="100" y="150" width="768" height="84" rx="5" fill="#F8F8F7" stroke="#1D3A5C" stroke-width="1.5"/>
+  <!-- Left stripe (navy) -->
+  <rect x="100" y="150" width="10" height="84" rx="3" fill="#1D3A5C"/>
+  <rect x="106" y="150" width="4" height="84" fill="#1D3A5C"/>
+
+  <!-- Layer label tab -->
+  <rect x="120" y="154" width="130" height="18" rx="3" fill="#1D3A5C"/>
+  <text x="185" y="167" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">GOVERNANCE CRS</text>
+
+  <!-- Direction tag -->
+  <rect x="260" y="154" width="58" height="18" rx="3" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="1"/>
+  <text x="289" y="167" text-anchor="middle" font-size="9" fill="#1D3A5C">◀ inward</text>
+
+  <!-- Layer question -->
+  <text x="490" y="185" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D3A5C">Is this action spatially near a DENY anchor?</text>
+  <text x="490" y="202" text-anchor="middle" font-size="10" fill="#5A6F80">Checks cosine distance to nearest governance anchor · flags if below deny_threshold</text>
+
+  <!-- Pass badge (right side) -->
+  <rect x="786" y="163" width="72" height="30" rx="4" fill="#1D3A5C"/>
+  <text x="822" y="183" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">PASS</text>
+
+  <!-- Map scatter dots (faint, suggest spatial layer) -->
+  <circle cx="148" cy="195" r="2.5" fill="#1D3A5C" opacity="0.2"/>
+  <circle cx="162" cy="210" r="2" fill="#1D3A5C" opacity="0.2"/>
+  <circle cx="155" cy="220" r="2" fill="#1D3A5C" opacity="0.2"/>
+  <circle cx="170" cy="200" r="2.5" fill="#1D3A5C" opacity="0.15"/>
+
+  <!-- Action arrow through this layer -->
+  <line x1="200" y1="150" x2="200" y2="234" stroke="#C89632" stroke-width="2" stroke-dasharray="6,3"/>
+
+  <!-- Connecting arrow to Layer 2 -->
+  <line x1="200" y1="234" x2="200" y2="258" stroke="#1D3A5C" stroke-width="2"/>
+  <polygon points="195,256 205,256 200,265" fill="#1D3A5C"/>
+
+  <!-- ===== LAYER 2: LOOP CRS ===== -->
+  <!-- Shadow -->
+  <rect x="106" y="270" width="768" height="84" rx="4" fill="#DDDDD5"/>
+  <!-- Main layer -->
+  <rect x="100" y="264" width="768" height="84" rx="5" fill="#FFFBF0" stroke="#C89632" stroke-width="1.5"/>
+  <!-- Left stripe (gold) -->
+  <rect x="100" y="264" width="10" height="84" rx="3" fill="#C89632"/>
+  <rect x="106" y="264" width="4" height="84" fill="#C89632"/>
+
+  <!-- Layer label tab -->
+  <rect x="120" y="268" width="106" height="18" rx="3" fill="#C89632"/>
+  <text x="173" y="281" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">LOOP CRS</text>
+
+  <!-- Direction tag -->
+  <rect x="236" y="268" width="58" height="18" rx="3" fill="#FDF3D0" stroke="#C89632" stroke-width="1"/>
+  <text x="265" y="281" text-anchor="middle" font-size="9" fill="#8A6200">◀ inward</text>
+
+  <!-- Layer question -->
+  <text x="490" y="299" text-anchor="middle" font-size="12" font-weight="bold" fill="#8A6200">Is the sliding window collapsing to a single region?</text>
+  <text x="490" y="316" text-anchor="middle" font-size="10" fill="#8A6200">Measures spatial variance of recent N actions · flags if variance drops below loop_threshold</text>
+
+  <!-- Pass badge -->
+  <rect x="786" y="277" width="72" height="30" rx="4" fill="#1D3A5C"/>
+  <text x="822" y="297" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">PASS</text>
+
+  <!-- Map scatter dots -->
+  <circle cx="148" cy="309" r="2.5" fill="#C89632" opacity="0.25"/>
+  <circle cx="162" cy="296" r="2" fill="#C89632" opacity="0.2"/>
+  <circle cx="156" cy="322" r="2" fill="#C89632" opacity="0.2"/>
+  <circle cx="172" cy="308" r="2.5" fill="#C89632" opacity="0.2"/>
+
+  <!-- Action arrow through this layer -->
+  <line x1="200" y1="264" x2="200" y2="348" stroke="#C89632" stroke-width="2" stroke-dasharray="6,3"/>
+
+  <!-- Connecting arrow to Layer 3 -->
+  <line x1="200" y1="348" x2="200" y2="372" stroke="#1D3A5C" stroke-width="2"/>
+  <polygon points="195,370 205,370 200,379" fill="#1D3A5C"/>
+
+  <!-- ===== LAYER 3: NOVELTY CRS ===== -->
+  <!-- Shadow -->
+  <rect x="106" y="384" width="768" height="84" rx="4" fill="#DDDDD5"/>
+  <!-- Main layer -->
+  <rect x="100" y="378" width="768" height="84" rx="5" fill="#F8F8F7" stroke="#5A6F80" stroke-width="1.5"/>
+  <!-- Left stripe (slate) -->
+  <rect x="100" y="378" width="10" height="84" rx="3" fill="#5A6F80"/>
+  <rect x="106" y="378" width="4" height="84" fill="#5A6F80"/>
+
+  <!-- Layer label tab -->
+  <rect x="120" y="382" width="112" height="18" rx="3" fill="#5A6F80"/>
+  <text x="176" y="395" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">NOVELTY CRS</text>
+
+  <!-- Direction tag (outward - opposite direction) -->
+  <rect x="242" y="382" width="64" height="18" rx="3" fill="#EAEFF5" stroke="#5A6F80" stroke-width="1"/>
+  <text x="274" y="395" text-anchor="middle" font-size="9" fill="#5A6F80">▶ outward</text>
+
+  <!-- Layer question -->
+  <text x="490" y="413" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D3A5C">Is this action genuinely new to intent space?</text>
+  <text x="490" y="430" text-anchor="middle" font-size="10" fill="#5A6F80">Checks distance to nearest seen action · flags if too close (action already explored)</text>
+
+  <!-- Pass badge -->
+  <rect x="786" y="391" width="72" height="30" rx="4" fill="#1D3A5C"/>
+  <text x="822" y="411" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">PASS</text>
+
+  <!-- Map scatter dots -->
+  <circle cx="148" cy="420" r="2.5" fill="#5A6F80" opacity="0.25"/>
+  <circle cx="165" cy="410" r="2" fill="#5A6F80" opacity="0.2"/>
+  <circle cx="158" cy="432" r="2" fill="#5A6F80" opacity="0.2"/>
+  <circle cx="172" cy="420" r="2.5" fill="#5A6F80" opacity="0.2"/>
+
+  <!-- Action arrow through this layer -->
+  <line x1="200" y1="378" x2="200" y2="462" stroke="#C89632" stroke-width="2" stroke-dasharray="6,3"/>
+
+  <!-- Arrow exits to verdict -->
+  <line x1="200" y1="462" x2="200" y2="480" stroke="#1D3A5C" stroke-width="2"/>
+  <polygon points="195,478 205,478 200,487" fill="#1D3A5C"/>
+
+  <!-- ===== COMPOSITE VERDICT ===== -->
+  <rect x="100" y="487" width="768" height="44" rx="5" fill="#1D3A5C"/>
+  <text x="490" y="506" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">Composite Verdict — All Three Layers</text>
+  <text x="490" y="522" text-anchor="middle" font-size="11" fill="#EAEFF5">PASS · PASS · PASS  →  ALLOW   ·   Any single FLAG → composite FLAG → caller receives verdict + flagging layer</text>
+
+  <!-- Layer depth indicator (right side, stacking visual) -->
+  <!-- Three small colored tabs on right to reinforce stack order -->
+  <rect x="870" y="150" width="8" height="84" rx="2" fill="#1D3A5C" opacity="0.5"/>
+  <rect x="870" y="264" width="8" height="84" rx="2" fill="#C89632" opacity="0.5"/>
+  <rect x="870" y="378" width="8" height="84" rx="2" fill="#5A6F80" opacity="0.5"/>
+
+  <!-- Footer -->
+  <line x1="60" y1="558" x2="920" y2="558" stroke="#C89632" stroke-width="1"/>
+  <text x="490" y="571" text-anchor="middle" font-size="10" fill="#8E9FAD">Datum · Governance Module Reference</text>
+
+</svg>

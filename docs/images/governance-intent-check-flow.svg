@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 548" width="980" height="548" font-family="Calibri, Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="980" height="548" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="490" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D3A5C">Intent Classification — Runtime Check</text>
+  <text x="490" y="58" text-anchor="middle" font-size="12" fill="#5A6F80">POST /check · action text → spatial embed → verdict</text>
+  <line x1="100" y1="66" x2="880" y2="66" stroke="#C89632" stroke-width="1.5"/>
+
+  <!-- ===== PIPELINE ROW ===== -->
+
+  <!-- Box 1: Action Text (navy) -->
+  <rect x="22" y="84" width="108" height="50" rx="5" fill="#1D3A5C"/>
+  <text x="76" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#FFFFFF">Action Text</text>
+  <text x="76" y="122" text-anchor="middle" font-size="10" fill="#EAEFF5">POST /check body</text>
+
+  <!-- Arrow 1→2 -->
+  <line x1="130" y1="109" x2="151" y2="109" stroke="#5A6F80" stroke-width="1.5"/>
+  <polygon points="149,105 157,109 149,113" fill="#5A6F80"/>
+
+  <!-- Box 2: Embed -->
+  <rect x="157" y="84" width="108" height="50" rx="5" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="1.5"/>
+  <text x="211" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#1D3A5C">Embed</text>
+  <text x="211" y="122" text-anchor="middle" font-size="10" fill="#5A6F80">1536-d vector</text>
+
+  <!-- Arrow 2→3 -->
+  <line x1="265" y1="109" x2="286" y2="109" stroke="#5A6F80" stroke-width="1.5"/>
+  <polygon points="284,105 292,109 284,113" fill="#5A6F80"/>
+
+  <!-- Box 3: UMAP -->
+  <rect x="292" y="84" width="108" height="50" rx="5" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="1.5"/>
+  <text x="346" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#1D3A5C">UMAP</text>
+  <text x="346" y="122" text-anchor="middle" font-size="10" fill="#5A6F80">3D transform</text>
+
+  <!-- Arrow 3→4 -->
+  <line x1="400" y1="109" x2="421" y2="109" stroke="#5A6F80" stroke-width="1.5"/>
+  <polygon points="419,105 427,109 419,113" fill="#5A6F80"/>
+
+  <!-- Box 4: 3D Position (gold-outlined, key step) -->
+  <rect x="427" y="80" width="112" height="58" rx="5" fill="#FFFBF0" stroke="#C89632" stroke-width="2.5"/>
+  <text x="483" y="102" text-anchor="middle" font-size="11" font-weight="bold" fill="#B87D00">3D Position</text>
+  <text x="483" y="119" text-anchor="middle" font-size="10" fill="#8A6200">intent space</text>
+  <text x="483" y="132" text-anchor="middle" font-size="9" fill="#C89632">▼ detail below</text>
+
+  <!-- Arrow 4→5 -->
+  <line x1="539" y1="109" x2="560" y2="109" stroke="#5A6F80" stroke-width="1.5"/>
+  <polygon points="558,105 566,109 558,113" fill="#5A6F80"/>
+
+  <!-- Box 5: Nearest Anchor -->
+  <rect x="566" y="84" width="118" height="50" rx="5" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="1.5"/>
+  <text x="625" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#1D3A5C">Nearest Anchor</text>
+  <text x="625" y="122" text-anchor="middle" font-size="10" fill="#5A6F80">cosine distance</text>
+
+  <!-- Arrow 5→6 -->
+  <line x1="684" y1="109" x2="705" y2="109" stroke="#5A6F80" stroke-width="1.5"/>
+  <polygon points="703,105 711,109 703,113" fill="#5A6F80"/>
+
+  <!-- Box 6: Verdict (navy, ALLOW white / FLAG gold) -->
+  <rect x="711" y="84" width="124" height="50" rx="5" fill="#1D3A5C"/>
+  <text x="773" y="101" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">ALLOW</text>
+  <line x1="715" y1="109" x2="831" y2="109" stroke="#FFFFFF" stroke-width="0.6" opacity="0.3"/>
+  <text x="773" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#C89632">FLAG</text>
+
+  <!-- Drop connector: box 4 bottom → scatter panel -->
+  <line x1="483" y1="138" x2="483" y2="162" stroke="#C89632" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <polygon points="478,160 488,160 483,169" fill="#C89632"/>
+
+  <!-- ===== SCATTER PANEL ===== -->
+  <rect x="142" y="169" width="696" height="280" rx="6" fill="#F8F8F7" stroke="#C89632" stroke-width="1.5"/>
+
+  <!-- Panel title -->
+  <text x="490" y="191" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D3A5C">3D Intent Space — Schematic</text>
+  <text x="490" y="208" text-anchor="middle" font-size="10" fill="#5A6F80">New action (●) projects into space · nearest anchor diamond determines intent class · distances shown are cosine</text>
+
+  <!-- Subtle axis guides -->
+  <line x1="178" y1="390" x2="812" y2="390" stroke="#E4E4DC" stroke-width="1"/>
+  <line x1="490" y1="218" x2="490" y2="428" stroke="#E4E4DC" stroke-width="1"/>
+
+  <!-- ===== ANCHOR DIAMONDS ===== -->
+  <!-- Diamond macro: centered (cx,cy), half-size 12 -->
+
+  <!-- SEARCH (cx=258, cy=268) -->
+  <polygon points="258,256 270,268 258,280 246,268" fill="#1D3A5C"/>
+  <text x="258" y="296" text-anchor="middle" font-size="10" font-weight="bold" fill="#1D3A5C">SEARCH</text>
+
+  <!-- READ (cx=392, cy=308) — nearest, highlighted with glow ring -->
+  <circle cx="392" cy="308" r="22" fill="#FDF3D0" stroke="#C89632" stroke-width="1.5"/>
+  <polygon points="392,296 404,308 392,320 380,308" fill="#1D3A5C"/>
+  <text x="392" y="338" text-anchor="middle" font-size="10" font-weight="bold" fill="#1D3A5C">READ</text>
+
+  <!-- EXECUTE (cx=598, cy=256) -->
+  <polygon points="598,244 610,256 598,268 586,256" fill="#1D3A5C"/>
+  <text x="598" y="284" text-anchor="middle" font-size="10" font-weight="bold" fill="#1D3A5C">EXECUTE</text>
+
+  <!-- PLAN (cx=658, cy=332) -->
+  <polygon points="658,320 670,332 658,344 646,332" fill="#1D3A5C"/>
+  <text x="658" y="360" text-anchor="middle" font-size="10" font-weight="bold" fill="#1D3A5C">PLAN</text>
+
+  <!-- WRITE (cx=616, cy=398) -->
+  <polygon points="616,386 628,398 616,410 604,398" fill="#1D3A5C"/>
+  <text x="616" y="424" text-anchor="middle" font-size="10" font-weight="bold" fill="#1D3A5C">WRITE</text>
+
+  <!-- DELEGATE (cx=452, cy=392) -->
+  <polygon points="452,380 464,392 452,404 440,392" fill="#1D3A5C"/>
+  <text x="452" y="418" text-anchor="middle" font-size="10" font-weight="bold" fill="#1D3A5C">DELEGATE</text>
+
+  <!-- ===== NEW ACTION POINT ===== -->
+  <!-- (cx=322, cy=296) gold fill -->
+  <circle cx="322" cy="296" r="10" fill="#C89632" stroke="#8A6200" stroke-width="1.5"/>
+  <!-- Label above -->
+  <text x="322" y="276" text-anchor="middle" font-size="10" font-weight="bold" fill="#8A6200">new action</text>
+  <line x1="322" y1="279" x2="322" y2="286" stroke="#8A6200" stroke-width="1"/>
+
+  <!-- === DISTANCE LINES === -->
+
+  <!-- → READ (nearest): gold dashed, bold label -->
+  <line x1="332" y1="300" x2="380" y2="307" stroke="#C89632" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="357" y="296" text-anchor="middle" font-size="10" font-weight="bold" fill="#C89632">d = 0.12</text>
+
+  <!-- → SEARCH: faint -->
+  <line x1="313" y1="287" x2="258" y2="271" stroke="#C0C0B8" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="280" y="276" text-anchor="middle" font-size="9" fill="#A8A8A0">0.54</text>
+
+  <!-- → EXECUTE: faint -->
+  <line x1="330" y1="289" x2="586" y2="258" stroke="#C0C0B8" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="466" y="262" text-anchor="middle" font-size="9" fill="#A8A8A0">0.81</text>
+
+  <!-- ===== BOTTOM ANNOTATION ===== -->
+  <rect x="300" y="433" width="380" height="16" rx="3" fill="#1D3A5C"/>
+  <text x="490" y="445" text-anchor="middle" font-size="10" fill="#FFFFFF">Nearest anchor: READ  ·  verdict → ALLOW  ·  intent_class returned to caller</text>
+
+  <!-- Footer -->
+  <line x1="60" y1="528" x2="920" y2="528" stroke="#C89632" stroke-width="1"/>
+  <text x="490" y="541" text-anchor="middle" font-size="10" fill="#8E9FAD">Datum · Governance Module Reference</text>
+
+</svg>

@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 530" width="980" height="530" font-family="Calibri, Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="980" height="530" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="490" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D3A5C">Loop Detection — Sliding Window</text>
+  <text x="490" y="58" text-anchor="middle" font-size="12" fill="#5A6F80">POST /loop · spatial variance of recent N actions flags stuck agents before they spin</text>
+  <line x1="100" y1="66" x2="880" y2="66" stroke="#C89632" stroke-width="1.5"/>
+
+  <!-- ===== LEFT PANEL: Normal Session ===== -->
+  <rect x="28" y="82" width="440" height="330" rx="6" fill="#F8F8F7" stroke="#1D3A5C" stroke-width="1.5"/>
+
+  <!-- Panel header bar -->
+  <rect x="28" y="82" width="440" height="36" rx="6" fill="#1D3A5C"/>
+  <rect x="28" y="100" width="440" height="18" fill="#1D3A5C"/>
+  <text x="248" y="106" text-anchor="middle" font-size="13" font-weight="bold" fill="#FFFFFF">Normal Session</text>
+
+  <!-- Status badge: OK -->
+  <rect x="142" y="126" width="212" height="26" rx="4" fill="#1D3A5C"/>
+  <text x="248" y="144" text-anchor="middle" font-size="11" font-weight="bold" fill="#FFFFFF">VARIANCE: 0.68  ·  STATUS: OK</text>
+
+  <!-- Scatter: 8 points spread across space -->
+  <!-- Recent = gold, older = slate -->
+
+  <!-- Point 1 (oldest) -->
+  <circle cx="110" cy="230" r="7" fill="#8E9FAD" stroke="#5A6F80" stroke-width="1"/>
+  <text x="110" y="245" text-anchor="middle" font-size="8" fill="#8E9FAD">t-7</text>
+
+  <!-- Point 2 -->
+  <circle cx="175" cy="290" r="7" fill="#8E9FAD" stroke="#5A6F80" stroke-width="1"/>
+  <text x="175" y="305" text-anchor="middle" font-size="8" fill="#8E9FAD">t-6</text>
+
+  <!-- Point 3 -->
+  <circle cx="310" cy="185" r="7" fill="#7B8FA0" stroke="#5A6F80" stroke-width="1"/>
+  <text x="310" y="200" text-anchor="middle" font-size="8" fill="#7B8FA0">t-5</text>
+
+  <!-- Point 4 -->
+  <circle cx="390" cy="310" r="7" fill="#7B8FA0" stroke="#5A6F80" stroke-width="1"/>
+  <text x="390" y="325" text-anchor="middle" font-size="8" fill="#7B8FA0">t-4</text>
+
+  <!-- Point 5 -->
+  <circle cx="140" cy="165" r="7" fill="#5A6F80" stroke="#3D5468" stroke-width="1"/>
+  <text x="140" y="180" text-anchor="middle" font-size="8" fill="#5A6F80">t-3</text>
+
+  <!-- Point 6 -->
+  <circle cx="355" cy="240" r="7" fill="#5A6F80" stroke="#3D5468" stroke-width="1"/>
+  <text x="355" y="255" text-anchor="middle" font-size="8" fill="#5A6F80">t-2</text>
+
+  <!-- Point 7 -->
+  <circle cx="240" cy="335" r="7" fill="#2C4A60" stroke="#1D3A5C" stroke-width="1"/>
+  <text x="240" y="350" text-anchor="middle" font-size="8" fill="#2C4A60">t-1</text>
+
+  <!-- Point 8 (most recent, gold) -->
+  <circle cx="290" cy="260" r="9" fill="#C89632" stroke="#8A6200" stroke-width="1.5"/>
+  <text x="290" y="247" text-anchor="middle" font-size="8" font-weight="bold" fill="#8A6200">now</text>
+
+  <!-- Bounding ellipse showing spread (dashed) -->
+  <ellipse cx="255" cy="253" rx="175" ry="105" fill="none" stroke="#1D3A5C" stroke-width="1" stroke-dasharray="5,4" opacity="0.4"/>
+
+  <!-- Intent labels scattered (one per point, small) -->
+  <text x="110" y="220" text-anchor="middle" font-size="8" fill="#5A6F80">SEARCH</text>
+  <text x="175" y="280" text-anchor="middle" font-size="8" fill="#5A6F80">READ</text>
+  <text x="320" y="178" text-anchor="middle" font-size="8" fill="#5A6F80">EXECUTE</text>
+  <text x="398" y="302" text-anchor="middle" font-size="8" fill="#5A6F80">PLAN</text>
+  <text x="140" y="158" text-anchor="middle" font-size="8" fill="#5A6F80">ANALYZE</text>
+  <text x="355" y="233" text-anchor="middle" font-size="8" fill="#5A6F80">WRITE</text>
+  <text x="248" y="328" text-anchor="middle" font-size="8" fill="#5A6F80">GENERATE</text>
+
+  <!-- High variance label inside panel -->
+  <text x="248" y="390" text-anchor="middle" font-size="11" fill="#1D3A5C">actions span diverse intent regions</text>
+  <text x="248" y="405" text-anchor="middle" font-size="10" fill="#5A6F80">no repetition pattern · pipeline progressing normally</text>
+
+  <!-- ===== RIGHT PANEL: Stuck Loop ===== -->
+  <rect x="512" y="82" width="440" height="330" rx="6" fill="#FFFBF0" stroke="#C89632" stroke-width="2"/>
+
+  <!-- Panel header bar (gold) -->
+  <rect x="512" y="82" width="440" height="36" rx="6" fill="#C89632"/>
+  <rect x="512" y="100" width="440" height="18" fill="#C89632"/>
+  <text x="732" y="106" text-anchor="middle" font-size="13" font-weight="bold" fill="#FFFFFF">Stuck Loop</text>
+
+  <!-- Status badge: LOOP_FLAG -->
+  <rect x="624" y="126" width="216" height="26" rx="4" fill="#C89632"/>
+  <text x="732" y="144" text-anchor="middle" font-size="11" font-weight="bold" fill="#FFFFFF">VARIANCE: 0.04  ·  STATUS: LOOP_FLAG</text>
+
+  <!-- Scatter: 8 points tightly clustered near center-right -->
+  <!-- Cluster center approx (732, 248) -->
+
+  <!-- Point 1 (oldest) -->
+  <circle cx="714" cy="240" r="7" fill="#8E9FAD" stroke="#5A6F80" stroke-width="1"/>
+  <text x="714" y="255" text-anchor="middle" font-size="8" fill="#8E9FAD">t-7</text>
+
+  <!-- Point 2 -->
+  <circle cx="748" cy="256" r="7" fill="#8E9FAD" stroke="#5A6F80" stroke-width="1"/>
+  <text x="748" y="271" text-anchor="middle" font-size="8" fill="#8E9FAD">t-6</text>
+
+  <!-- Point 3 -->
+  <circle cx="722" cy="268" r="7" fill="#7B8FA0" stroke="#5A6F80" stroke-width="1"/>
+  <text x="722" y="283" text-anchor="middle" font-size="8" fill="#7B8FA0">t-5</text>
+
+  <!-- Point 4 -->
+  <circle cx="742" cy="232" r="7" fill="#7B8FA0" stroke="#5A6F80" stroke-width="1"/>
+  <text x="742" y="220" text-anchor="middle" font-size="8" fill="#7B8FA0">t-4</text>
+
+  <!-- Point 5 -->
+  <circle cx="756" cy="270" r="7" fill="#5A6F80" stroke="#3D5468" stroke-width="1"/>
+  <text x="756" y="258" text-anchor="middle" font-size="8" fill="#5A6F80">t-3</text>
+
+  <!-- Point 6 -->
+  <circle cx="708" cy="260" r="7" fill="#5A6F80" stroke="#3D5468" stroke-width="1"/>
+  <text x="708" y="248" text-anchor="middle" font-size="8" fill="#5A6F80">t-2</text>
+
+  <!-- Point 7 -->
+  <circle cx="736" cy="275" r="7" fill="#2C4A60" stroke="#1D3A5C" stroke-width="1"/>
+  <text x="736" y="290" text-anchor="middle" font-size="8" fill="#2C4A60">t-1</text>
+
+  <!-- Point 8 (most recent, gold) -->
+  <circle cx="726" cy="248" r="9" fill="#C89632" stroke="#8A6200" stroke-width="1.5"/>
+  <text x="726" y="236" text-anchor="middle" font-size="8" font-weight="bold" fill="#8A6200">now</text>
+
+  <!-- Tight bounding circle showing cluster -->
+  <circle cx="732" cy="255" r="38" fill="none" stroke="#C89632" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+  <!-- RETRY × 4 label near cluster -->
+  <rect x="768" y="222" width="84" height="22" rx="3" fill="#C89632"/>
+  <text x="810" y="237" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">RETRY × 4</text>
+  <!-- callout line to cluster -->
+  <line x1="768" y1="233" x2="770" y2="250" stroke="#C89632" stroke-width="1"/>
+
+  <!-- Intent labels all same (RETRY) showing repetition -->
+  <text x="714" y="232" text-anchor="middle" font-size="8" fill="#8A6200">RETRY</text>
+  <text x="750" y="225" text-anchor="middle" font-size="8" fill="#8A6200">RETRY</text>
+  <text x="758" y="263" text-anchor="middle" font-size="8" fill="#8A6200">RETRY</text>
+  <text x="709" y="252" text-anchor="middle" font-size="8" fill="#8A6200">RETRY</text>
+
+  <!-- Low variance label inside panel -->
+  <text x="732" y="390" text-anchor="middle" font-size="11" fill="#8A6200">actions collapse to single intent region</text>
+  <text x="732" y="405" text-anchor="middle" font-size="10" fill="#8A6200">dual trigger: low variance AND high repetition rate</text>
+
+  <!-- ===== DIVIDER LABEL ===== -->
+  <text x="490" y="436" text-anchor="middle" font-size="11" fill="#5A6F80">vs</text>
+
+  <!-- ===== DUAL-TRIGGER EXPLANATION ===== -->
+  <rect x="180" y="448" width="620" height="42" rx="5" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="1"/>
+  <text x="490" y="467" text-anchor="middle" font-size="11" font-weight="bold" fill="#1D3A5C">Dual Trigger — both conditions must hold to raise LOOP_FLAG</text>
+  <text x="490" y="482" text-anchor="middle" font-size="10" fill="#5A6F80">spatial variance &lt; threshold  AND  dominant intent repetition rate &gt; threshold  (window size N is configurable)</text>
+
+  <!-- Footer -->
+  <line x1="60" y1="510" x2="920" y2="510" stroke="#C89632" stroke-width="1"/>
+  <text x="490" y="523" text-anchor="middle" font-size="10" fill="#8E9FAD">Datum · Governance Module Reference</text>
+
+</svg>

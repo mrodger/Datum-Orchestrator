@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" width="980" height="560" font-family="Calibri, Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="980" height="560" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="490" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D3A5C">Agent Capability Envelope</text>
+  <text x="490" y="58" text-anchor="middle" font-size="12" fill="#5A6F80">Each agent's convex hull defines allowed intents · same CRS, different envelopes · breach = FLAG regardless of governance tag</text>
+  <line x1="100" y1="66" x2="880" y2="66" stroke="#C89632" stroke-width="1.5"/>
+
+  <!-- Shared axis labels -->
+  <text x="490" y="96" text-anchor="middle" font-size="10" fill="#C0C0B8" font-style="italic">2D projection of 3D intent space (schematic)</text>
+
+  <!-- ===== LEFT PANEL: Coding Agent ===== -->
+  <rect x="28" y="106" width="444" height="380" rx="6" fill="#F8F8F7" stroke="#1D3A5C" stroke-width="1.5"/>
+
+  <!-- Panel header -->
+  <rect x="28" y="106" width="444" height="34" rx="6" fill="#1D3A5C"/>
+  <rect x="28" y="122" width="444" height="18" fill="#1D3A5C"/>
+  <text x="250" y="129" text-anchor="middle" font-size="13" font-weight="bold" fill="#FFFFFF">Coding Agent</text>
+
+  <!-- Capability hull (large polygon, navy stroke, semi-transparent fill) -->
+  <!-- Hull covers: SEARCH, READ, WRITE, EXECUTE, ANALYZE, PLAN -->
+  <!-- Points arranged to form a convex hull shape -->
+  <polygon points="100,420  88,300  140,200  250,155  340,160  390,230  400,320  360,410  220,445"
+           fill="#EAEFF5" stroke="#1D3A5C" stroke-width="2" stroke-dasharray="6,3" opacity="0.9"/>
+
+  <!-- Intent anchor diamonds INSIDE hull -->
+  <!-- SEARCH (cx=155, cy=220) -->
+  <polygon points="155,210 165,220 155,230 145,220" fill="#1D3A5C"/>
+  <text x="155" y="246" text-anchor="middle" font-size="9" fill="#1D3A5C">SEARCH</text>
+
+  <!-- READ (cx=130, cy=310) -->
+  <polygon points="130,300 140,310 130,320 120,310" fill="#1D3A5C"/>
+  <text x="130" y="335" text-anchor="middle" font-size="9" fill="#1D3A5C">READ</text>
+
+  <!-- WRITE (cx=330, cy=390) -->
+  <polygon points="330,380 340,390 330,400 320,390" fill="#1D3A5C"/>
+  <text x="330" y="414" text-anchor="middle" font-size="9" fill="#1D3A5C">WRITE</text>
+
+  <!-- EXECUTE (cx=370, cy=260) -->
+  <polygon points="370,250 380,260 370,270 360,260" fill="#1D3A5C"/>
+  <text x="370" y="284" text-anchor="middle" font-size="9" fill="#1D3A5C">EXECUTE</text>
+
+  <!-- ANALYZE (cx=300, cy=195) -->
+  <polygon points="300,185 310,195 300,205 290,195" fill="#1D3A5C"/>
+  <text x="300" y="219" text-anchor="middle" font-size="9" fill="#1D3A5C">ANALYZE</text>
+
+  <!-- PLAN (cx=230, cy=350) -->
+  <polygon points="230,340 240,350 230,360 220,350" fill="#1D3A5C"/>
+  <text x="230" y="374" text-anchor="middle" font-size="9" fill="#1D3A5C">PLAN</text>
+
+  <!-- INSIDE point (green-ish check) -->
+  <circle cx="255" cy="280" r="10" fill="#1D3A5C" stroke="#FFFFFF" stroke-width="1.5"/>
+  <text x="255" y="284" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">✓</text>
+  <text x="255" y="264" text-anchor="middle" font-size="9" fill="#1D3A5C" font-weight="bold">new action</text>
+  <text x="255" y="300" text-anchor="middle" font-size="8" fill="#5A6F80" font-style="italic">inside hull → normal</text>
+
+  <!-- Hull size label -->
+  <text x="250" y="460" text-anchor="middle" font-size="11" fill="#1D3A5C" font-weight="bold">Large envelope</text>
+  <text x="250" y="476" text-anchor="middle" font-size="10" fill="#5A6F80">SEARCH · READ · WRITE · EXECUTE · ANALYZE · PLAN</text>
+
+  <!-- ===== RIGHT PANEL: Research Drone ===== -->
+  <rect x="508" y="106" width="444" height="380" rx="6" fill="#F8F8F7" stroke="#C89632" stroke-width="2"/>
+
+  <!-- Panel header (gold) -->
+  <rect x="508" y="106" width="444" height="34" rx="6" fill="#C89632"/>
+  <rect x="508" y="122" width="444" height="18" fill="#C89632"/>
+  <text x="730" y="129" text-anchor="middle" font-size="13" font-weight="bold" fill="#FFFFFF">Research Drone</text>
+
+  <!-- Capability hull (smaller polygon, gold stroke) -->
+  <!-- Hull covers: SEARCH, READ, ANALYZE, GENERATE, RESPOND only -->
+  <polygon points="600,390  575,295  610,210  700,175  770,210  790,300  760,385  680,420"
+           fill="#FDF3D0" stroke="#C89632" stroke-width="2" stroke-dasharray="6,3" opacity="0.9"/>
+
+  <!-- Intent anchor diamonds INSIDE hull -->
+  <!-- SEARCH (cx=630, cy=240) -->
+  <polygon points="630,230 640,240 630,250 620,240" fill="#8A6200"/>
+  <text x="630" y="265" text-anchor="middle" font-size="9" fill="#8A6200">SEARCH</text>
+
+  <!-- READ (cx=608, cy=320) -->
+  <polygon points="608,310 618,320 608,330 598,320" fill="#8A6200"/>
+  <text x="608" y="344" text-anchor="middle" font-size="9" fill="#8A6200">READ</text>
+
+  <!-- ANALYZE (cx=720, cy=210) -->
+  <polygon points="720,200 730,210 720,220 710,210" fill="#8A6200"/>
+  <text x="720" y="234" text-anchor="middle" font-size="9" fill="#8A6200">ANALYZE</text>
+
+  <!-- GENERATE (cx=775, cy=310) -->
+  <polygon points="775,300 785,310 775,320 765,310" fill="#8A6200"/>
+  <text x="775" y="334" text-anchor="middle" font-size="9" fill="#8A6200">GENERATE</text>
+
+  <!-- RESPOND (cx=720, cy=385) -->
+  <polygon points="720,375 730,385 720,395 710,385" fill="#8A6200"/>
+  <text x="720" y="409" text-anchor="middle" font-size="9" fill="#8A6200">RESPOND</text>
+
+  <!-- INSIDE point (normal action) -->
+  <circle cx="680" cy="295" r="10" fill="#C89632" stroke="#FFFFFF" stroke-width="1.5"/>
+  <text x="680" y="299" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">✓</text>
+  <text x="680" y="279" text-anchor="middle" font-size="9" fill="#8A6200" font-weight="bold">new action</text>
+  <text x="680" y="314" text-anchor="middle" font-size="8" fill="#8A6200" font-style="italic">inside hull → normal</text>
+
+  <!-- OUTSIDE point (breach) -->
+  <circle cx="840" cy="420" r="10" fill="#0F1923" stroke="#FFFFFF" stroke-width="1.5"/>
+  <text x="840" y="424" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">✕</text>
+  <!-- Breach label -->
+  <line x1="840" y1="430" x2="840" y2="454" stroke="#0F1923" stroke-width="1" stroke-dasharray="3,2"/>
+  <rect x="786" y="455" width="108" height="28" rx="3" fill="#0F1923"/>
+  <text x="840" y="467" text-anchor="middle" font-size="9" font-weight="bold" fill="#FFFFFF">capability breach</text>
+  <text x="840" y="478" text-anchor="middle" font-size="9" fill="#EAEFF5">WRITE attempted</text>
+
+  <!-- Annotation: WRITE is outside -->
+  <text x="840" y="410" text-anchor="middle" font-size="9" fill="#0F1923" font-style="italic">WRITE</text>
+  <text x="840" y="395" text-anchor="middle" font-size="9" fill="#0F1923">outside hull →</text>
+
+  <!-- Hull size label -->
+  <text x="730" y="510" text-anchor="middle" font-size="11" fill="#8A6200" font-weight="bold">Constrained envelope</text>
+  <text x="730" y="526" text-anchor="middle" font-size="10" fill="#8A6200">SEARCH · READ · ANALYZE · GENERATE · RESPOND</text>
+  <text x="730" y="541" text-anchor="middle" font-size="9" fill="#5A6F80">WRITE, EXECUTE, DELETE not permitted — breach flagged regardless of governance tag</text>
+
+  <!-- Footer -->
+  <line x1="60" y1="540" x2="920" y2="540" stroke="#C89632" stroke-width="1"/>
+  <text x="490" y="553" text-anchor="middle" font-size="10" fill="#8E9FAD">Datum · Governance Module Reference</text>
+
+</svg>

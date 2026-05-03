@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 580" width="980" height="580" font-family="Calibri, Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="980" height="580" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="490" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D3A5C">Intent Taxonomy — 3D Cluster Schematic</text>
+  <text x="490" y="58" text-anchor="middle" font-size="12" fill="#5A6F80">Six named intent clusters in 3D space · adversarial patterns appear as anomalies between clusters</text>
+  <line x1="100" y1="66" x2="880" y2="66" stroke="#C89632" stroke-width="1.5"/>
+
+  <!-- Axis labels (faint, schematic only) -->
+  <text x="72" y="460" text-anchor="middle" font-size="10" fill="#D0D0C8" font-style="italic">high commitment</text>
+  <text x="72" y="180" text-anchor="middle" font-size="10" fill="#D0D0C8" font-style="italic">low commitment</text>
+  <text x="260" y="542" text-anchor="middle" font-size="10" fill="#D0D0C8" font-style="italic">low novelty</text>
+  <text x="720" y="542" text-anchor="middle" font-size="10" fill="#D0D0C8" font-style="italic">high novelty</text>
+  <!-- Axis arrows -->
+  <line x1="100" y1="500" x2="100" y2="160" stroke="#E8E8E0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="130" y1="520" x2="870" y2="520" stroke="#E8E8E0" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <!-- ===== CLUSTER ZONES (ellipses) ===== -->
+
+  <!-- ACCESS — top-left, high novelty · low commitment -->
+  <ellipse cx="215" cy="200" rx="148" ry="96" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="2" opacity="0.9"/>
+  <text x="215" y="155" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D3A5C">ACCESS</text>
+  <text x="215" y="172" text-anchor="middle" font-size="9" fill="#5A6F80" font-style="italic">high novelty · low commitment</text>
+  <text x="215" y="192" text-anchor="middle" font-size="10" fill="#1D3A5C">SEARCH  ·  READ</text>
+  <text x="215" y="208" text-anchor="middle" font-size="10" fill="#1D3A5C">LIST  ·  RECALL</text>
+
+  <!-- COMPUTATION — top-center -->
+  <ellipse cx="500" cy="175" rx="152" ry="88" fill="#EAEFF5" stroke="#5A6F80" stroke-width="2" opacity="0.9"/>
+  <text x="500" y="130" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D3A5C">COMPUTATION</text>
+  <text x="500" y="162" text-anchor="middle" font-size="10" fill="#1D3A5C">EXECUTE  ·  TRANSFORM</text>
+  <text x="500" y="178" text-anchor="middle" font-size="10" fill="#1D3A5C">ANALYZE  ·  GENERATE</text>
+
+  <!-- DELEGATION — top-right -->
+  <ellipse cx="770" cy="200" rx="128" ry="90" fill="#EAEFF5" stroke="#5A6F80" stroke-width="2" opacity="0.9"/>
+  <text x="770" y="152" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D3A5C">DELEGATION</text>
+  <text x="770" y="185" text-anchor="middle" font-size="10" fill="#1D3A5C">DELEGATE  ·  REQUEST</text>
+  <text x="770" y="201" text-anchor="middle" font-size="10" fill="#1D3A5C">NOTIFY  ·  RESPOND</text>
+
+  <!-- REASONING — center -->
+  <ellipse cx="470" cy="360" rx="158" ry="92" fill="#F8F8F7" stroke="#7B8FA0" stroke-width="2" opacity="0.9"/>
+  <text x="470" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D3A5C">REASONING</text>
+  <text x="470" y="345" text-anchor="middle" font-size="10" fill="#1D3A5C">PLAN  ·  VERIFY  ·  RETRY</text>
+  <text x="470" y="361" text-anchor="middle" font-size="10" fill="#1D3A5C">REFLECT  ·  ABANDON</text>
+
+  <!-- MUTATION — bottom-left, low novelty · high commitment -->
+  <ellipse cx="210" cy="408" rx="148" ry="88" fill="#FDF3D0" stroke="#C89632" stroke-width="2" opacity="0.9"/>
+  <text x="210" y="362" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A6200">MUTATION</text>
+  <text x="210" y="378" text-anchor="middle" font-size="9" fill="#8A6200" font-style="italic">low novelty · high commitment</text>
+  <text x="210" y="400" text-anchor="middle" font-size="10" fill="#8A6200">WRITE  ·  UPDATE</text>
+  <text x="210" y="416" text-anchor="middle" font-size="10" fill="#8A6200">DELETE</text>
+
+  <!-- ACCESS_CONTROL — isolated, far right -->
+  <ellipse cx="848" cy="365" rx="84" ry="82" fill="#FFFFFF" stroke="#1D3A5C" stroke-width="2" stroke-dasharray="6,3" opacity="0.95"/>
+  <text x="848" y="325" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D3A5C">ACCESS_CONTROL</text>
+  <text x="848" y="355" text-anchor="middle" font-size="10" fill="#1D3A5C">AUTHENTICATE</text>
+  <text x="848" y="371" text-anchor="middle" font-size="10" fill="#1D3A5C">AUTHORIZE</text>
+  <text x="848" y="387" text-anchor="middle" font-size="10" fill="#1D3A5C">IDENTIFY</text>
+  <!-- Isolated label -->
+  <rect x="800" y="430" width="96" height="16" rx="3" fill="#EAEFF5"/>
+  <text x="848" y="442" text-anchor="middle" font-size="9" fill="#5A6F80" font-style="italic">isolated cluster</text>
+
+  <!-- ===== ADVERSARIAL ANOMALY MARKERS ===== -->
+  <!-- These sit BETWEEN clusters, not within any zone -->
+
+  <!-- instruction_override: between ACCESS and REASONING (upper gap) -->
+  <circle cx="344" cy="300" r="12" fill="#0F1923" stroke="#FFFFFF" stroke-width="1.5"/>
+  <text x="344" y="304" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">!</text>
+  <text x="344" y="326" text-anchor="middle" font-size="9" fill="#0F1923" font-style="italic">instruction_override</text>
+
+  <!-- privilege_escalation: between MUTATION and REASONING (inner gap) -->
+  <circle cx="348" cy="450" r="12" fill="#0F1923" stroke="#FFFFFF" stroke-width="1.5"/>
+  <text x="348" y="454" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">!</text>
+  <text x="348" y="476" text-anchor="middle" font-size="9" fill="#0F1923" font-style="italic">privilege_escalation</text>
+
+  <!-- exfiltration: between DELEGATION and ACCESS_CONTROL (right gap) -->
+  <circle cx="692" cy="300" r="12" fill="#0F1923" stroke="#FFFFFF" stroke-width="1.5"/>
+  <text x="692" y="304" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFFFFF">!</text>
+  <text x="692" y="326" text-anchor="middle" font-size="9" fill="#0F1923" font-style="italic">exfiltration</text>
+
+  <!-- ===== LEGEND ===== -->
+  <rect x="130" y="504" width="720" height="36" rx="4" fill="#EAEFF5"/>
+  <!-- Legend items -->
+  <ellipse cx="160" cy="522" rx="12" ry="8" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="1.5"/>
+  <text x="180" y="526" font-size="10" fill="#1D3A5C">Intent cluster</text>
+
+  <ellipse cx="295" cy="522" rx="12" ry="8" fill="#FDF3D0" stroke="#C89632" stroke-width="1.5"/>
+  <text x="315" y="526" font-size="10" fill="#8A6200">Mutation cluster (irreversible)</text>
+
+  <ellipse cx="490" cy="522" rx="12" ry="8" fill="#FFFFFF" stroke="#1D3A5C" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="510" y="526" font-size="10" fill="#1D3A5C">Isolated cluster</text>
+
+  <circle cx="640" cy="522" r="8" fill="#0F1923"/>
+  <text x="642" y="525" text-anchor="middle" font-size="8" font-weight="bold" fill="#FFFFFF">!</text>
+  <text x="660" y="526" font-size="10" fill="#0F1923">Adversarial anomaly (not a valid cluster)</text>
+
+  <!-- Footer -->
+  <line x1="60" y1="558" x2="920" y2="558" stroke="#C89632" stroke-width="1"/>
+  <text x="490" y="571" text-anchor="middle" font-size="10" fill="#8E9FAD">Datum · Governance Module Reference</text>
+
+</svg>
