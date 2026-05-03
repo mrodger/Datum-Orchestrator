@@ -2,6 +2,16 @@
 
 How pre-labelling intent at training time eliminates the need for LLM calls at runtime.
 
+## POST /check — single action flow
+
+![Intent check flow](images/governance-intent-check-flow.svg)
+
+Text → embed → UMAP project → nearest anchor → `ALLOW` or `FLAG`. No LLM call at runtime.
+
+---
+
+## Training vs runtime
+
 ```mermaid
 flowchart LR
 

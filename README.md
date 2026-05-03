@@ -43,6 +43,8 @@ graph TB
     User -->|"/knowledge /drift /runs"| Orch
 ```
 
+For governance architecture diagrams (multi-CRS layers, intent clusters, loop detection, capability envelope) see [`docs/governance.md`](docs/governance.md).
+
 ### Modules
 
 | Module | Purpose |
@@ -79,6 +81,12 @@ sequenceDiagram
     O->>PG: Drift sweep
     O-->>C: RunStatus
 ```
+
+### Task lifecycle
+
+![Task states](docs/images/orchestrator-task-states.svg)
+
+State machine: `QUEUED → DISPATCHED → POLLING → COMPLETE / FAILED` with retry. Actor swimlanes: Client, `server.py`, `orchestrator.py`, Drone API, PostGIS.
 
 ## Quickstart
 
