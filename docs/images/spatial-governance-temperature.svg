@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 640" width="920" height="640" font-family="Calibri, Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="920" height="640" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="460" y="40" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D3A5C">Spatial Governance — Temperature Calibration</text>
+  <text x="460" y="60" text-anchor="middle" font-size="12" fill="#5A6F80">Agent harness assesses spatial position of a task, then sets LLM temperature accordingly</text>
+  <line x1="120" y1="68" x2="800" y2="68" stroke="#C89632" stroke-width="1.5"/>
+
+  <!-- TASK INPUT BOX -->
+  <rect x="330" y="82" width="260" height="48" rx="6" fill="#1D3A5C"/>
+  <text x="460" y="101" text-anchor="middle" font-size="13" font-weight="bold" fill="#FFFFFF">Incoming Task</text>
+  <text x="460" y="119" text-anchor="middle" font-size="11" fill="#EAEFF5">+ spatial context metadata</text>
+
+  <!-- Arrow down to governor -->
+  <line x1="460" y1="130" x2="460" y2="155" stroke="#5A6F80" stroke-width="1.5"/>
+  <polygon points="455,153 465,153 460,162" fill="#5A6F80"/>
+
+  <!-- SPATIAL GOVERNOR BOX -->
+  <rect x="240" y="162" width="440" height="66" rx="6" fill="#EAEFF5" stroke="#C89632" stroke-width="2"/>
+  <rect x="240" y="162" width="440" height="26" rx="6" fill="#C89632"/>
+  <rect x="240" y="178" width="440" height="10" fill="#C89632"/>
+  <text x="460" y="179" text-anchor="middle" font-size="13" font-weight="bold" fill="#FFFFFF">Spatial Governor</text>
+  <text x="460" y="200" text-anchor="middle" font-size="11" fill="#0F1923">Classifies task by spatial precision: exact geometry → named region → conceptual space</text>
+  <text x="460" y="216" text-anchor="middle" font-size="10" fill="#5A6F80">Reads: coordinate precision · geometry type · reference abstraction level</text>
+
+  <!-- Three branch arrows from governor -->
+  <!-- Left -->
+  <line x1="320" y1="228" x2="160" y2="290" stroke="#1D3A5C" stroke-width="1.5"/>
+  <polygon points="155,286 162,295 168,285" fill="#1D3A5C"/>
+  <!-- Centre -->
+  <line x1="460" y1="228" x2="460" y2="290" stroke="#7B8FA0" stroke-width="1.5"/>
+  <polygon points="455,288 465,288 460,297" fill="#7B8FA0"/>
+  <!-- Right -->
+  <line x1="600" y1="228" x2="760" y2="290" stroke="#C89632" stroke-width="1.5"/>
+  <polygon points="752,285 758,295 765,286" fill="#C89632"/>
+
+  <!-- LEFT CARD: Precise Geometry -->
+  <rect x="50" y="297" width="215" height="148" rx="6" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="1.5"/>
+  <rect x="50" y="297" width="215" height="26" rx="6" fill="#1D3A5C"/>
+  <rect x="50" y="313" width="215" height="10" fill="#1D3A5C"/>
+  <text x="157" y="314" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">Precise Geometry</text>
+  <text x="157" y="338" text-anchor="middle" font-size="11" fill="#1D3A5C" font-weight="bold">Temperature → 0.0 – 0.2</text>
+  <text x="157" y="357" text-anchor="middle" font-size="10.5" fill="#0F1923">Exact coordinates, WKT</text>
+  <text x="157" y="372" text-anchor="middle" font-size="10.5" fill="#0F1923">polygons, cadastral IDs.</text>
+  <text x="157" y="387" text-anchor="middle" font-size="10.5" fill="#0F1923">Task needs reproducible</text>
+  <text x="157" y="402" text-anchor="middle" font-size="10.5" fill="#0F1923">spatial output every run.</text>
+  <text x="157" y="420" text-anchor="middle" font-size="10" fill="#8E9FAD">e.g. buffer a parcel boundary</text>
+
+  <!-- CENTRE CARD: Named Region -->
+  <rect x="352" y="297" width="215" height="148" rx="6" fill="#EAEFF5" stroke="#7B8FA0" stroke-width="1.5"/>
+  <rect x="352" y="297" width="215" height="26" rx="6" fill="#7B8FA0"/>
+  <rect x="352" y="313" width="215" height="10" fill="#7B8FA0"/>
+  <text x="460" y="314" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">Named Region</text>
+  <text x="460" y="338" text-anchor="middle" font-size="11" fill="#1D3A5C" font-weight="bold">Temperature → 0.4 – 0.6</text>
+  <text x="460" y="357" text-anchor="middle" font-size="10.5" fill="#0F1923">Suburb, city, district</text>
+  <text x="460" y="372" text-anchor="middle" font-size="10.5" fill="#0F1923">references. Some flex</text>
+  <text x="460" y="387" text-anchor="middle" font-size="10.5" fill="#0F1923">in phrasing; facts still</text>
+  <text x="460" y="402" text-anchor="middle" font-size="10.5" fill="#0F1923">need to be accurate.</text>
+  <text x="460" y="420" text-anchor="middle" font-size="10" fill="#8E9FAD">e.g. summarise growth in Tāmaki</text>
+
+  <!-- RIGHT CARD: Conceptual Space -->
+  <rect x="655" y="297" width="215" height="148" rx="6" fill="#EAEFF5" stroke="#C89632" stroke-width="1.5"/>
+  <rect x="655" y="297" width="215" height="26" rx="6" fill="#C89632"/>
+  <rect x="655" y="313" width="215" height="10" fill="#C89632"/>
+  <text x="762" y="314" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">Conceptual Space</text>
+  <text x="762" y="338" text-anchor="middle" font-size="11" fill="#C89632" font-weight="bold">Temperature → 0.7 – 1.0</text>
+  <text x="762" y="357" text-anchor="middle" font-size="10.5" fill="#0F1923">Vague or narrative</text>
+  <text x="762" y="372" text-anchor="middle" font-size="10.5" fill="#0F1923">spatial refs ("coastal",</text>
+  <text x="762" y="387" text-anchor="middle" font-size="10.5" fill="#0F1923">"rural fringe"). Creative</text>
+  <text x="762" y="402" text-anchor="middle" font-size="10.5" fill="#0F1923">interpretation is fine.</text>
+  <text x="762" y="420" text-anchor="middle" font-size="10" fill="#8E9FAD">e.g. describe a sense of place</text>
+
+  <!-- Converging arrows to LLM loop -->
+  <!-- Left card arrow -->
+  <line x1="157" y1="445" x2="157" y2="470" stroke="#1D3A5C" stroke-width="1.5"/>
+  <line x1="157" y1="470" x2="390" y2="510" stroke="#1D3A5C" stroke-width="1.5"/>
+  <!-- Centre card arrow -->
+  <line x1="460" y1="445" x2="460" y2="510" stroke="#7B8FA0" stroke-width="1.5"/>
+  <!-- Right card arrow -->
+  <line x1="762" y1="445" x2="762" y2="470" stroke="#C89632" stroke-width="1.5"/>
+  <line x1="762" y1="470" x2="530" y2="510" stroke="#C89632" stroke-width="1.5"/>
+
+  <!-- Arrow tips into LLM box -->
+  <polygon points="385,508 395,508 390,517" fill="#1D3A5C"/>
+  <polygon points="455,508 465,508 460,517" fill="#7B8FA0"/>
+  <polygon points="525,508 535,508 530,517" fill="#C89632"/>
+
+  <!-- LLM CALLING LOOP BOX -->
+  <rect x="220" y="517" width="480" height="64" rx="6" fill="#1D3A5C"/>
+  <text x="460" y="538" text-anchor="middle" font-size="13" font-weight="bold" fill="#FFFFFF">LLM Calling Loop</text>
+  <text x="460" y="556" text-anchor="middle" font-size="11" fill="#EAEFF5">temperature = spatial_governor.score(task)</text>
+  <text x="460" y="572" text-anchor="middle" font-size="10" fill="#8E9FAD">Set once per task · re-evaluated on spatial context change</text>
+
+  <!-- Arrow to output -->
+  <line x1="460" y1="581" x2="460" y2="603" stroke="#5A6F80" stroke-width="1.5"/>
+  <polygon points="455,601 465,601 460,610" fill="#5A6F80"/>
+
+  <!-- OUTPUT BOX -->
+  <rect x="330" y="610" width="260" height="22" rx="4" fill="#EAEFF5" stroke="#C89632" stroke-width="1"/>
+  <text x="460" y="625" text-anchor="middle" font-size="11" fill="#0F1923">Calibrated agent response</text>
+
+  <!-- Footer -->
+  <line x1="60" y1="638" x2="860" y2="638" stroke="#C89632" stroke-width="1"/>
+
+</svg>

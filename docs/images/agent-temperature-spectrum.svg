@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="900" height="520" font-family="Calibri, Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="900" height="520" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="450" y="48" text-anchor="middle" font-size="22" font-weight="bold" fill="#1D3A5C">Agent Behaviour Spectrum</text>
+  <text x="450" y="70" text-anchor="middle" font-size="13" fill="#5A6F80">Controlled by temperature in the LLM calling loop</text>
+  <!-- Amber underline -->
+  <line x1="160" y1="78" x2="740" y2="78" stroke="#C89632" stroke-width="2"/>
+
+  <!-- Gradient bar -->
+  <defs>
+    <linearGradient id="spectrumGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1D3A5C"/>
+      <stop offset="50%" stop-color="#7B8FA0"/>
+      <stop offset="100%" stop-color="#C89632"/>
+    </linearGradient>
+  </defs>
+  <rect x="80" y="110" width="740" height="40" rx="6" fill="url(#spectrumGrad)"/>
+
+  <!-- Tick marks -->
+  <!-- 0.0 -->
+  <line x1="80" y1="150" x2="80" y2="165" stroke="#0F1923" stroke-width="2"/>
+  <text x="80" y="180" text-anchor="middle" font-size="13" fill="#0F1923" font-weight="bold">0.0</text>
+  <!-- 0.3 -->
+  <line x1="302" y1="150" x2="302" y2="160" stroke="#5A6F80" stroke-width="1.5"/>
+  <text x="302" y="175" text-anchor="middle" font-size="12" fill="#5A6F80">0.3</text>
+  <!-- 0.7 -->
+  <line x1="598" y1="150" x2="598" y2="160" stroke="#5A6F80" stroke-width="1.5"/>
+  <text x="598" y="175" text-anchor="middle" font-size="12" fill="#5A6F80">0.7</text>
+  <!-- 1.0 -->
+  <line x1="820" y1="150" x2="820" y2="165" stroke="#0F1923" stroke-width="2"/>
+  <text x="820" y="180" text-anchor="middle" font-size="13" fill="#0F1923" font-weight="bold">1.0</text>
+
+  <!-- End labels -->
+  <text x="80" y="200" text-anchor="middle" font-size="14" font-weight="bold" fill="#1D3A5C">Deterministic</text>
+  <text x="820" y="200" text-anchor="middle" font-size="14" font-weight="bold" fill="#C89632">Non-deterministic</text>
+
+  <!-- Pole descriptors -->
+  <text x="80" y="218" text-anchor="middle" font-size="11" fill="#5A6F80">consistent · predictable</text>
+  <text x="820" y="218" text-anchor="middle" font-size="11" fill="#5A6F80">creative · exploratory</text>
+
+  <!-- Middle label -->
+  <text x="450" y="200" text-anchor="middle" font-size="12" fill="#8E9FAD">Balanced</text>
+
+  <!-- Divider -->
+  <line x1="80" y1="236" x2="820" y2="236" stroke="#EAEFF5" stroke-width="1.5"/>
+
+  <!-- Example cards — 4 across -->
+  <!-- Card: Classification Agent -->
+  <rect x="60" y="252" width="170" height="140" rx="6" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="1.5"/>
+  <rect x="60" y="252" width="170" height="28" rx="6" fill="#1D3A5C"/>
+  <rect x="60" y="270" width="170" height="10" fill="#1D3A5C"/>
+  <text x="145" y="271" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">Classification Agent</text>
+  <text x="145" y="295" text-anchor="middle" font-size="11" fill="#1D3A5C" font-weight="bold">~0.0 – 0.1</text>
+  <text x="145" y="314" text-anchor="middle" font-size="11" fill="#0F1923">Labels documents,</text>
+  <text x="145" y="330" text-anchor="middle" font-size="11" fill="#0F1923">routes tickets, flags</text>
+  <text x="145" y="346" text-anchor="middle" font-size="11" fill="#0F1923">anomalies. Must be</text>
+  <text x="145" y="362" text-anchor="middle" font-size="11" fill="#0F1923">consistent every run.</text>
+
+  <!-- Card: Research Analyst -->
+  <rect x="255" y="252" width="170" height="140" rx="6" fill="#EAEFF5" stroke="#1D3A5C" stroke-width="1.5"/>
+  <rect x="255" y="252" width="170" height="28" rx="6" fill="#1D3A5C"/>
+  <rect x="255" y="270" width="170" height="10" fill="#1D3A5C"/>
+  <text x="340" y="271" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">Research Analyst</text>
+  <text x="340" y="295" text-anchor="middle" font-size="11" fill="#1D3A5C" font-weight="bold">~0.3 – 0.5</text>
+  <text x="340" y="314" text-anchor="middle" font-size="11" fill="#0F1923">Summarises sources,</text>
+  <text x="340" y="330" text-anchor="middle" font-size="11" fill="#0F1923">draws conclusions.</text>
+  <text x="340" y="346" text-anchor="middle" font-size="11" fill="#0F1923">Some variation OK;</text>
+  <text x="340" y="362" text-anchor="middle" font-size="11" fill="#0F1923">accuracy still matters.</text>
+
+  <!-- Card: Copywriter -->
+  <rect x="450" y="252" width="170" height="140" rx="6" fill="#EAEFF5" stroke="#C89632" stroke-width="1.5"/>
+  <rect x="450" y="252" width="170" height="28" rx="6" fill="#C89632"/>
+  <rect x="450" y="270" width="170" height="10" fill="#C89632"/>
+  <text x="535" y="271" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">Copywriter Agent</text>
+  <text x="535" y="295" text-anchor="middle" font-size="11" fill="#C89632" font-weight="bold">~0.6 – 0.8</text>
+  <text x="535" y="314" text-anchor="middle" font-size="11" fill="#0F1923">Writes marketing</text>
+  <text x="535" y="330" text-anchor="middle" font-size="11" fill="#0F1923">copy, social posts,</text>
+  <text x="535" y="346" text-anchor="middle" font-size="11" fill="#0F1923">taglines. Variety and</text>
+  <text x="535" y="362" text-anchor="middle" font-size="11" fill="#0F1923">flair are the goal.</text>
+
+  <!-- Card: Brainstorm Agent -->
+  <rect x="645" y="252" width="175" height="140" rx="6" fill="#EAEFF5" stroke="#C89632" stroke-width="1.5"/>
+  <rect x="645" y="252" width="175" height="28" rx="6" fill="#C89632"/>
+  <rect x="645" y="270" width="175" height="10" fill="#C89632"/>
+  <text x="732" y="271" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFFFFF">Brainstorm Agent</text>
+  <text x="732" y="295" text-anchor="middle" font-size="11" fill="#C89632" font-weight="bold">~0.9 – 1.0</text>
+  <text x="732" y="314" text-anchor="middle" font-size="11" fill="#0F1923">Generates novel</text>
+  <text x="732" y="330" text-anchor="middle" font-size="11" fill="#0F1923">ideas, stories, or</text>
+  <text x="732" y="346" text-anchor="middle" font-size="11" fill="#0F1923">concepts. Output</text>
+  <text x="732" y="362" text-anchor="middle" font-size="11" fill="#0F1923">varies by design.</text>
+
+  <!-- Tradeoff row -->
+  <text x="450" y="420" text-anchor="middle" font-size="12" fill="#8E9FAD">↑ lower temperature</text>
+  <text x="80" y="440" text-anchor="middle" font-size="12" fill="#1D3A5C">+ reliable, auditable</text>
+  <text x="80" y="456" text-anchor="middle" font-size="12" fill="#8E9FAD">− less flexible</text>
+  <text x="820" y="440" text-anchor="middle" font-size="12" fill="#C89632">+ creative, adaptive</text>
+  <text x="820" y="456" text-anchor="middle" font-size="12" fill="#8E9FAD">− may hallucinate</text>
+
+  <!-- Arrow left -->
+  <line x1="160" y1="448" x2="340" y2="448" stroke="#1D3A5C" stroke-width="1.5" marker-end="url(#arrowLeft)"/>
+  <!-- Arrow right -->
+  <line x1="740" y1="448" x2="560" y2="448" stroke="#C89632" stroke-width="1.5" marker-end="url(#arrowRight)"/>
+
+  <defs>
+    <marker id="arrowLeft" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#1D3A5C"/>
+    </marker>
+    <marker id="arrowRight" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#C89632"/>
+    </marker>
+  </defs>
+
+  <!-- Footer -->
+  <line x1="60" y1="490" x2="840" y2="490" stroke="#C89632" stroke-width="1"/>
+  <text x="450" y="508" text-anchor="middle" font-size="10" fill="#8E9FAD">Datum · Agent Design Reference</text>
+
+</svg>
