@@ -95,8 +95,7 @@
   <text x="67" y="373" text-anchor="middle" font-size="10" fill="#1D3A5C" font-weight="bold">server.py</text>
   <text x="67" y="407" text-anchor="middle" font-size="10" fill="#1D3A5C" font-weight="bold">orchestrator.py</text>
   <text x="67" y="441" text-anchor="middle" font-size="10" fill="#1D3A5C" font-weight="bold">Drone API</text>
-  <text x="67" y="466" text-anchor="middle" font-size="9" fill="#5A6F80">dispatch.py</text>
-  <text x="67" y="475" text-anchor="middle" font-size="10" fill="#1D3A5C" font-weight="bold">PostGIS</text>
+  <text x="67" y="471" text-anchor="middle" font-size="10" fill="#1D3A5C" font-weight="bold">PostGIS</text>
 
   <!-- === Client bar: active at QUEUED phase === -->
   <rect x="136" y="322" width="176" height="26" rx="3" fill="#8E9FAD" opacity="0.7"/>
