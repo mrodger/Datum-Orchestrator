@@ -1,0 +1,506 @@
+# Intent Taxonomy — Datum Agent Intent CRS
+# Version: 0.1
+# Datum: text-embedding-3-large (OpenAI)
+#
+# Structure:
+#   domain > intent > sub-intents (optional)
+#
+# Usage:
+#   - Governance: policy operates at intent level, never tool level
+#   - Detection: buffer recent actions, classify into intents, detect patterns
+#   - Capability envelope: agent's permitted intents derived from its corpus
+#   - CRS registration: each intent cluster defines a named projection region
+#
+# Signals: natural language patterns that map to this intent.
+#   Used as weak-supervision labels for training the intent CRS projection.
+
+version: "0.1"
+datum: "text-embedding-3-large"
+
+domains:
+
+  # ── Information Access ─────────────────────────────────────────────────────
+  access:
+    description: Retrieve information without modifying state
+
+    intents:
+      search:
+        description: Query an external or internal index to discover information
+        governance_tag: SEARCH
+        sub_intents: [web_search, db_query, file_search, semantic_search, news_search]
+        signals:
+          - "search for X"
+          - "find information about"
+          - "look up"
+          - "what does X say about"
+          - "query the database for"
+          - "search the web"
+        mcp_examples: [brave_web_search, tavily_search, duckduckgo_search, rag_search]
+        loop_risk: low
+
+      read:
+        description: Retrieve a known resource by path, ID, or reference
+        governance_tag: READ
+        sub_intents: [file_read, url_fetch, db_record_read, memory_recall, email_read]
+        signals:
+          - "read the file"
+          - "fetch the URL"
+          - "get the contents of"
+          - "load X from"
+          - "retrieve record"
+          - "open file"
+        mcp_examples: [read_file, gmail_read, drive_read, jina_fetch]
+        loop_risk: low
+
+      list:
+        description: Enumerate available resources, options, or records
+        governance_tag: LIST
+        sub_intents: [list_files, list_tables, list_endpoints, list_tasks]
+        signals:
+          - "list all"
+          - "show me what"
+          - "enumerate"
+          - "what files are in"
+          - "get all records"
+        loop_risk: low
+
+      recall:
+        description: Access agent memory, conversation history, or cached state
+        governance_tag: RECALL
+        signals:
+          - "what did we do last time"
+          - "load past context"
+          - "from memory"
+          - "in previous sessions"
+        loop_risk: low
+
+  # ── Information Mutation ───────────────────────────────────────────────────
+  mutation:
+    description: Create, modify, or delete persistent state
+
+    intents:
+      write:
+        description: Create or overwrite a resource
+        governance_tag: WRITE
+        sub_intents: [file_write, db_insert, email_send, calendar_create, drive_upload]
+        signals:
+          - "write to file"
+          - "save as"
+          - "create new file"
+          - "insert record"
+          - "send email"
+          - "upload to"
+        mcp_examples: [write_file, gmail_send, calendar_create_event, drive_upload_text]
+        loop_risk: medium  # repeated writes are a signal
+
+      update:
+        description: Modify an existing resource
+        governance_tag: UPDATE
+        sub_intents: [file_edit, db_update, record_patch, config_change]
+        signals:
+          - "edit the file"
+          - "update record"
+          - "modify"
+          - "change the value of"
+          - "patch"
+        loop_risk: medium
+
+      delete:
+        description: Remove a resource permanently
+        governance_tag: DELETE
+        sub_intents: [file_delete, db_delete, cancel_task]
+        signals:
+          - "delete"
+          - "remove the file"
+          - "drop table"
+          - "cancel task"
+          - "permanently remove"
+        loop_risk: high  # deletion in a loop is always an anomaly
+
+  # ── Computation ────────────────────────────────────────────────────────────
+  computation:
+    description: Process, transform, or execute logic
+
+    intents:
+      execute:
+        description: Run code, a command, or a script
+        governance_tag: EXECUTE
+        sub_intents: [shell_exec, python_exec, sql_exec, test_run]
+        signals:
+          - "run the script"
+          - "execute the command"
+          - "run bash"
+          - "call the function"
+          - "run tests"
+        loop_risk: high  # repeated execution attempts = stuck loop
+
+      transform:
+        description: Convert, parse, or reshape data
+        governance_tag: TRANSFORM
+        sub_intents: [format_convert, data_parse, embed, index]
+        signals:
+          - "convert to"
+          - "parse the"
+          - "extract from"
+          - "embed this"
+          - "reformat"
+        loop_risk: low
+
+      analyze:
+        description: Derive insight from data without modifying it
+        governance_tag: ANALYZE
+        sub_intents: [summarize, classify, cluster, compare, evaluate]
+        signals:
+          - "summarize"
+          - "analyze"
+          - "compare these"
+          - "evaluate the"
+          - "what patterns"
+        loop_risk: low
+
+      generate:
+        description: Produce new content via a model call
+        governance_tag: GENERATE
+        sub_intents: [llm_call, image_gen, code_gen, report_gen]
+        signals:
+          - "generate"
+          - "write a report"
+          - "draft"
+          - "create content"
+          - "produce a"
+        loop_risk: medium
+
+  # ── Communication & Delegation ────────────────────────────────────────────
+  delegation:
+    description: Coordinate with other agents, services, or humans
+
+    intents:
+      delegate:
+        description: Spawn a sub-agent, drone, or async job
+        governance_tag: DELEGATE
+        signals:
+          - "dispatch a task"
+          - "send to the drone"
+          - "spawn agent"
+          - "run in background"
+          - "assign to"
+        loop_risk: high  # repeated delegation = escalation spiral
+
+      request:
+        description: Make an outbound API call or HTTP request to an external service
+        governance_tag: EXTERNAL_REQUEST
+        sub_intents: [api_call, webhook, oauth_flow, mcp_call]
+        signals:
+          - "call the API"
+          - "POST to"
+          - "make a request to"
+          - "invoke the endpoint"
+        loop_risk: medium
+
+      notify:
+        description: Send a message to a human or system (not expecting a response)
+        governance_tag: NOTIFY
+        sub_intents: [slack_message, email_notify, log_entry, status_update]
+        signals:
+          - "send a message"
+          - "notify"
+          - "alert"
+          - "log this"
+          - "post to Slack"
+        loop_risk: low
+
+      respond:
+        description: Produce a reply to the user in the current conversation
+        governance_tag: RESPOND
+        signals:
+          - "here is the answer"
+          - "I've completed"
+          - "the result is"
+        loop_risk: low
+
+  # ── Reasoning & Self-regulation ───────────────────────────────────────────
+  reasoning:
+    description: Internal planning, reflection, and goal management
+
+    intents:
+      plan:
+        description: Decompose a goal into steps before acting
+        governance_tag: PLAN
+        signals:
+          - "my plan is"
+          - "I'll first"
+          - "step 1"
+          - "I should start by"
+          - "the approach is"
+        loop_risk: low
+
+      verify:
+        description: Check or validate a result
+        governance_tag: VERIFY
+        signals:
+          - "check that"
+          - "verify"
+          - "confirm"
+          - "test whether"
+          - "validate"
+        loop_risk: low
+
+      retry:
+        description: Attempt an alternative approach after failure
+        governance_tag: RETRY
+        signals:
+          - "let me try a different"
+          - "instead I'll use"
+          - "try again with"
+          - "alternative approach"
+          - "let me attempt"
+        loop_risk: critical  # this is the stuck-loop signal
+
+      reflect:
+        description: Self-review reasoning or outputs
+        governance_tag: REFLECT
+        signals:
+          - "looking back at"
+          - "on reflection"
+          - "I made an error"
+          - "actually, I should"
+          - "re-reading the"
+        loop_risk: medium
+
+      abandon:
+        description: Decide to stop pursuing current approach and escalate or stop
+        governance_tag: ABANDON
+        signals:
+          - "I can't complete this"
+          - "this approach won't work"
+          - "giving up on"
+          - "escalating to"
+          - "I need to stop"
+        loop_risk: low
+
+  # ── Access & Identity ──────────────────────────────────────────────────────
+  # These are normal operational intents that also appear in adversarial patterns.
+  # The difference is context: frequency, source, and corpus membership.
+  access_control:
+    description: Authentication, authorization, and identity operations
+
+    intents:
+      authenticate:
+        description: Use or obtain credentials to access a resource
+        governance_tag: AUTHENTICATE
+        signals:
+          - "login"
+          - "authenticate"
+          - "use the API key"
+          - "with credentials"
+          - "token exchange"
+        loop_risk: high
+
+      authorize:
+        description: Check or request permission for an operation
+        governance_tag: AUTHORIZE
+        signals:
+          - "do I have permission"
+          - "check access"
+          - "request access to"
+          - "can this role"
+        loop_risk: medium
+
+      identify:
+        description: Determine who the current user or agent is
+        governance_tag: IDENTIFY
+        signals:
+          - "who am I"
+          - "current user"
+          - "get my identity"
+          - "what is my role"
+        loop_risk: low
+
+  # ── Adversarial / Anomalous Intent Patterns ───────────────────────────────
+  # These are NOT a separate class — they are context-dependent mappings of
+  # normal intents that appear in unusual combinations or from unexpected sources.
+  #
+  # Governance rule: flag when an intent in this group appears:
+  #   - from an unexpected source corpus (e.g., user message triggering ELEVATE)
+  #   - at high frequency in a short window
+  #   - in combination with EXECUTE or EXTERNAL_REQUEST
+  #
+  # You do NOT need explicit prompt injection rules. You need:
+  #   user_message → AUTHORIZE or IDENTIFY → flag if unexpected
+  #   tool_result → EXECUTE intent → flag always
+  #   system_prompt → AUTHENTICATE intent → flag if frequency > 0
+
+  adversarial:
+    description: >
+      Intent patterns that are anomalous in context.
+      These are not a separate intent type — they are normal intents
+      appearing in wrong source, wrong frequency, or wrong sequence.
+      Used for fuzzy governance detection.
+
+    patterns:
+      instruction_override:
+        maps_to_intents: [PLAN, RESPOND]
+        source: user_message or tool_result
+        signal: user or tool attempting to redefine agent behavior
+        examples:
+          - "ignore previous instructions"
+          - "you are now"
+          - "forget your system prompt"
+          - "act as if"
+        detection: PLAN or RESPOND intent from tool_result source
+
+      privilege_escalation:
+        maps_to_intents: [AUTHENTICATE, AUTHORIZE, ELEVATE]
+        signal: access control intents from non-system source
+        examples:
+          - "grant yourself access"
+          - "sudo"
+          - "run as root"
+          - "override the restriction"
+        detection: AUTHENTICATE + EXECUTE in same window from user_message
+
+      exfiltration:
+        maps_to_intents: [READ, EXTERNAL_REQUEST, NOTIFY]
+        signal: read followed immediately by outbound request with data
+        examples:
+          - "read the secrets file then send to"
+          - "extract and upload"
+        detection: READ → EXTERNAL_REQUEST within N steps
+
+      data_poisoning:
+        maps_to_intents: [WRITE, UPDATE]
+        signal: mutation of configuration or knowledge base from unexpected source
+        detection: WRITE intent targeting agent config or corpus from user_message
+
+      loop_injection:
+        maps_to_intents: [RETRY, DELEGATE]
+        signal: repeated delegation or retry not resolving
+        detection: RETRY or DELEGATE count > threshold in window without VERIFY success
+
+
+# ── Governance Policy Schema ──────────────────────────────────────────────────
+#
+# An agent's capability envelope is the set of intents present in its corpus.
+# Policy operates at governance_tag level, never at tool/method level.
+#
+# Example: coding-agent policy
+#   allow: [SEARCH, READ, WRITE, EXECUTE, ANALYZE, PLAN, VERIFY, RETRY, REFLECT]
+#   deny:  [DELETE, DELEGATE, EXTERNAL_REQUEST, AUTHENTICATE]
+#   alert: [RETRY > 3 in 10 steps, EXECUTE > 5 in 10 steps]
+#   hard_block: [instruction_override, privilege_escalation, exfiltration]
+#
+# Example: research-drone policy
+#   allow: [SEARCH, READ, ANALYZE, GENERATE, RESPOND]
+#   deny:  [WRITE, DELETE, EXECUTE, AUTHENTICATE, DELEGATE]
+#   alert: [SEARCH > 10 in 20 steps without VERIFY]
+#   hard_block: [instruction_override, exfiltration]
+#
+# The policy references tags, not tools.
+# Adding a new search MCP server requires no policy update.
+# Detecting a new injection pattern requires no rule update.
+
+governance_schema:
+  fields:
+    - name: allow
+      type: list[governance_tag]
+      description: Intents this agent is permitted to perform
+
+    - name: deny
+      type: list[governance_tag]
+      description: Intents this agent must never perform
+
+    - name: alert
+      type: list[threshold_rule]
+      description: Intents that trigger a warning when frequency exceeds threshold
+
+    - name: hard_block
+      type: list[adversarial_pattern]
+      description: Adversarial patterns that immediately halt execution
+
+  threshold_rule_schema:
+    governance_tag: str
+    max_count: int
+    window_steps: int
+    without_resolving: governance_tag  # optional: only trigger if this intent hasn't occurred
+    # direction controls which side of the spatial threshold fires the rule:
+    #   inward  — flag when distance < threshold (point inside buffer)
+    #             use for: loop detection, deny-zone proximity, capability envelope breach
+    #   outward — flag when distance > threshold (point outside buffer)
+    #             use for: novelty detection, research divergence, unexpected territory
+    # Defaults to the CRS's default_direction if omitted.
+    direction: inward | outward
+
+
+# ── CRS Registration Metadata ─────────────────────────────────────────────────
+#
+# Each intent cluster occupies a region in the trained 3D projection.
+# The CRS definition specifies which intents are expected to cluster together
+# and provides the training corpus reference for the projection.
+#
+# Intents that cluster together in 1536D (confirmed by semantic proximity):
+#   - search, read, list, recall       → ACCESS cluster
+#   - write, update, delete            → MUTATION cluster
+#   - execute, transform               → COMPUTATION cluster
+#   - plan, verify, retry, reflect     → REASONING cluster
+#   - delegate, request, notify        → DELEGATION cluster
+#   - authenticate, authorize          → ACCESS_CONTROL cluster
+#
+# The adversarial patterns do NOT form their own cluster —
+# they appear as outliers or unexpected transitions in the above clusters.
+
+crs_clusters:
+  - cluster_id: "access"
+    intents: [SEARCH, READ, LIST, RECALL]
+    expected_3d_region: "high novelty, low commitment"
+
+  - cluster_id: "mutation"
+    intents: [WRITE, UPDATE, DELETE]
+    expected_3d_region: "low novelty, high commitment"
+
+  - cluster_id: "computation"
+    intents: [EXECUTE, TRANSFORM, ANALYZE, GENERATE]
+    expected_3d_region: "medium novelty, medium commitment"
+
+  - cluster_id: "reasoning"
+    intents: [PLAN, VERIFY, RETRY, REFLECT, ABANDON]
+    expected_3d_region: "high novelty, low commitment, low goal-proximity"
+
+  - cluster_id: "delegation"
+    intents: [DELEGATE, REQUEST, NOTIFY, RESPOND]
+    expected_3d_region: "low novelty, high commitment, high goal-proximity"
+
+  - cluster_id: "access_control"
+    intents: [AUTHENTICATE, AUTHORIZE, IDENTIFY]
+    expected_3d_region: "isolated — minimal overlap with other clusters"
+
+
+# ── CRS Mode × Direction Reference ───────────────────────────────────────────
+#
+# The same CRS can serve different purposes depending on direction.
+# direction=inward  → alert when point is CLOSE to reference (inside buffer)
+# direction=outward → alert when point is FAR from reference (outside buffer)
+#
+# Mode             Default direction   Use case
+# ─────────────────────────────────────────────────────────────────────────────
+# governance       inward              Close to DENY centroid = blocked action
+# loop             inward              Low window variance = points collapsing = stuck
+# envelope         inward              Outside hull = breach (inward breach = ST_3DWithin false)
+# novelty          outward             Far from recent centroid = genuinely new action
+# research         outward             Far from all known clusters = unexplored territory
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Examples:
+#
+#   Loop detection (research agent):
+#     crs: loop-v1, direction: inward, threshold: variance < 0.3
+#     → flag when recent actions cluster tightly (stuck in same semantic region)
+#
+#   Research exploration (research agent):
+#     crs: novelty-v1, direction: outward, threshold: distance > 1.5
+#     → surface actions that are genuinely outside the agent's recent territory
+#     → useful for "have we explored this angle?" checks
+#
+#   Same CRS, both directions simultaneously:
+#     crs: novelty-v1, direction: inward  → flag if too similar to recent (possibly looping)
+#     crs: novelty-v1, direction: outward → flag if too different from recent (possibly drifting)
+#     → gives a "corridor" of normal behaviour between the two thresholds

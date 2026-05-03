@@ -1,0 +1,16 @@
+[Unit]
+Description=Datum Governance Microservice (Intent CRS)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=marcus
+WorkingDirectory=/home/marcus/tools
+EnvironmentFile=/home/marcus/.secrets.env
+ExecStart=/home/marcus/venvs/brain-embed/bin/python governance_server.py --port 3011
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
