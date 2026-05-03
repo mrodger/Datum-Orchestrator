@@ -43,8 +43,6 @@ graph TB
     User -->|"/knowledge /drift /runs"| Orch
 ```
 
-For governance architecture diagrams (multi-CRS layers, intent clusters, loop detection, capability envelope) see [`docs/governance.md`](docs/governance.md).
-
 ### Modules
 
 | Module | Purpose |
@@ -87,6 +85,42 @@ sequenceDiagram
 ![Task states](docs/images/orchestrator-task-states.svg)
 
 State machine: `QUEUED → DISPATCHED → POLLING → COMPLETE / FAILED` with retry. Actor swimlanes: Client, `server.py`, `orchestrator.py`, Drone API, PostGIS.
+
+## Governance
+
+The Intent CRS layer classifies every agent action spatially — no LLM call at runtime.
+
+### POST /check — intent classification pipeline
+
+![Intent check flow](docs/images/governance-intent-check-flow.svg)
+
+Text → embed (1536d) → UMAP project (3d) → nearest anchor → `ALLOW` or `FLAG`.
+
+### Multi-CRS layers
+
+![Multi-CRS layers](docs/images/governance-multi-crs-layers.svg)
+
+One action evaluated through three independent CRS spaces simultaneously (Governance, Loop, Novelty) producing a composite verdict.
+
+### Intent clusters
+
+![Intent clusters](docs/images/governance-intent-clusters.svg)
+
+Six intent domains in 3D space: ACCESS, COMPUTATION, DELEGATION, REASONING, MUTATION, ACCESS_CONTROL. Adversarial anomaly markers sit between clusters — actions falling outside any cluster boundary trigger a `FLAG`. See [`governance/intent_taxonomy.yaml`](governance/intent_taxonomy.yaml) for label definitions.
+
+### Loop detection
+
+![Loop detection](docs/images/governance-loop-detection.svg)
+
+Normal session (high spatial variance) vs stuck loop (low variance, dual trigger: spatial variance below threshold **and** repetition rate above threshold).
+
+### Capability envelope
+
+![Capability envelope](docs/images/governance-capability-envelope.svg)
+
+Convex hull per agent type derived from training corpus. `ST_3DWithin` on the PostGIS hull catches out-of-envelope actions without a rules list.
+
+Full behavioural contracts: [`governance/MANIFEST.md`](governance/MANIFEST.md).
 
 ## Quickstart
 
@@ -187,7 +221,7 @@ Skills are markdown files in `/app/skills/`. Each describes a reusable procedure
 - Callback endpoint has no authentication (internal docker network; deferred to API gateway)
 - BackgroundTasks are not durable (needs a queue for production scale)
 - No watchdog for stuck dispatched runs
-- Failed ingestion is terminal per-run; recovery is via new manual ingest
+- Failed ingestion is recoverable via `POST /reingest/{run_id}` or `POST /reingest/all-failed`
 - Coverage cell membership uses coordinate rounding (0.1-degree grid); cells at exact boundaries may have minor rounding variance between Python and SQL derivation
 
 ## Review history
